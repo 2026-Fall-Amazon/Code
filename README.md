@@ -1,26 +1,154 @@
 # 2026-Fall-Amazon
-Amazon Tech SIBC project
 
-# Initializing
-1) Log into Github <br>
-2) Go to the file directory where you want the git to sit
-3) Windows: click bar at the top and type "cmd". iOS: I'm not sure
-4) git init <br>
-5) git remote add origin https://github.com/2026-Fall-Amazon/Code <br>
-6) git branch<br>
+Amazon Tech SIBC Project
 
-# Pushing YOUR work INTO Github (your computer -> shared space)
-1) git switch -c "branch_name" : branch_name should be "week_last_first". You must begin indexing at 00. Ex. "00_Zhou_York" means Week 1 of our project. Do not just make changes to the master/main branch. It makes version history and version tracking extremely difficult. <br>
-  1a) git switch "branch_name" : if you already created a branch and you want to make edits to that version <br>
-2) git status : check what files are being tracked <br>
-3) git add : add your files <br>
-4) git commit -m "Descriptive message" : this helps us know what you changed or what you did<br>
-5) git push : putting files on your computer to the shared Github space<br>
-   5a) git push -u origin "branch-name" : first push to the branch<br>
+## Initial Setup
 
-# Pulling changes FROM Github to YOUR computer (shared space -> computer)
-1) git switch main : go to the main branch to update your own branch <br>
-2) git pull --rebase : only use if you want to pull changes (do not use the first time setting up Github. Only use for pulling changes)<br>
-3) 
+You only need to do this once on each computer.
 
+1. Log in to GitHub.
 
+2. Go to the folder where you want the repository to be stored.
+
+3. Open a terminal in that folder.
+
+   **Windows:** Click the folder path/address bar, type `cmd`, and press Enter.
+
+   **macOS:** Open Terminal and navigate to the folder using `cd`.
+
+4. Clone the repository:
+
+```bash
+git clone https://github.com/2026-Fall-Amazon/Code.git
+```
+
+5. Enter the repository:
+
+```bash
+cd Code
+```
+
+You now have a local copy of the shared GitHub repository.
+
+---
+
+# Pushing YOUR Work INTO GitHub
+
+**Your computer → shared GitHub repository**
+
+## IMPORTANT: Do Not Work Directly on `main`
+
+Each person should work on their own branch.
+
+Our branch naming format is:
+
+```text
+week_last_first
+```
+
+The week number begins at `00`.
+
+For example:
+
+```text
+00_Zhou_York
+```
+
+means **Week 1** of the project.
+
+The numbering works like this:
+
+```text
+00 = Week 1
+01 = Week 2
+02 = Week 3
+03 = Week 4
+```
+
+Do **not** make project changes directly on the `main` branch.
+
+Using separate branches makes it easier to track version history, review changes, and fix problems if something goes wrong.
+
+## 1. Update `main`
+
+Before beginning new work, make sure your local `main` branch has the newest changes from GitHub:
+
+```bash
+git switch main
+git pull --rebase origin main
+```
+
+> Do not run `git pull` before you have cloned the repository for the first time. `git clone` already downloads the repository.
+
+## 2. Create Your Branch
+
+Create a new branch for the current week:
+
+```bash
+git switch -c 00_Last_First
+```
+
+Example:
+
+```bash
+git switch -c 00_Zhou_York
+```
+
+If you already created the branch and simply want to return to it:
+
+```bash
+git switch 00_Zhou_York
+```
+
+## 3. Check Your Changes
+
+Use:
+
+```bash
+git status
+```
+
+This shows which files have been changed, added, or deleted.
+
+## 4. Add Your Files
+
+To add all changed files:
+
+```bash
+git add .
+```
+
+To add only one specific file:
+
+```bash
+git add filename.py
+```
+
+You can run this again afterward to verify what will be committed:
+
+```bash
+git status
+```
+
+## 5. Commit Your Changes
+
+Commit your work with a descriptive message:
+
+```bash
+git commit -m "Descriptive message explaining what you changed"
+```
+
+Example:
+
+```bash
+git commit -m "Add product review preprocessing script"
+```
+
+Use commit messages that explain what you actually changed.
+
+For example:
+
+```text
+Add sentiment analysis function
+Fix missing values in review dataset
+Update API
