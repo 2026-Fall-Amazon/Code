@@ -1,5 +1,11 @@
 
-import { a, defineData, type ClientSchema } from '@aws-amplify/backend';
+import {
+  a,
+  defineData,
+  type ClientSchema,
+} from '@aws-amplify/backend';
+
+import { pythonTemplate } from '../functions/python-template/resource';
 
 const schema = a.schema({
 
@@ -86,6 +92,25 @@ const schema = a.schema({
     allow.authenticated().to(['read']),
     allow.group('ADMINS')
   ]),
+
+  // Response type for Python Lambda
+  ClubSummary: a.customType({
+    id: a.id().required(),
+    name: a.string().required(),
+    description: a.string(),
+  }),
+
+  // Custom GraphQL query invoking Python Lambda
+  getClubFromPython: a.query()
+    .arguments({
+      clubId: a.id().required(),
+    })
+    .returns(a.ref('ClubSummary'))
+    .authorization(allow => [
+      allow.authenticated(),
+    ])
+    .handler(a.handler.function(pythonTemplate)),
+
 });
 
 export type Schema = ClientSchema<typeof schema>;
