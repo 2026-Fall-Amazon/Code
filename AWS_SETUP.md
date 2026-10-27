@@ -23,6 +23,10 @@ architecture built on AWS Amplify Gen 2.
 be configured when implementing the relevant feature.*
 
 
+1. `resource.ts` tells AWS what to create.
+2. `backend.ts` tells Amplify which resources are part of your application.
+3. `amplify.yml` tells Amplify how to build and deploy the application.
+
 ## 1. Quick start (application developers)
 
 1. Get access to the [GitHub repository](https://github.com/2026-Fall-Amazon/Code) and follow its [README](https://github.com/2026-Fall-Amazon/Code#readme) to configure GitHub SSH and the weekly branch workflow.
