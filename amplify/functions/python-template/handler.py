@@ -2,42 +2,45 @@
 import os
 import boto3
 
-# Initialize DynamoDB connection
+# AWS SDK for DynamoDB
 dynamodb = boto3.resource("dynamodb")
 
-# Table name is provided by Amplify/CDK
-club_table = dynamodb.Table(
-    os.environ["CLUB_TABLE_NAME"]
-)
+# Get the table name provided by CDK
+TABLE_NAME = os.environ["CLUB_TABLE_NAME"]
+
+# Reference the DynamoDB table
+club_table = dynamodb.Table(TABLE_NAME)
 
 
 def lambda_handler(event, context):
     """
-    Retrieve a club from DynamoDB.
+    Retrieve a club from DynamoDB using its ID.
 
     Input:
         event["arguments"]["clubId"]
 
-    Output:
-        ClubSummary object or None
+    Returns:
+        ClubSummary dictionary or None
     """
 
-    # Get club ID from AppSync request
+    # Extract the club ID from AppSync
     club_id = event["arguments"]["clubId"]
 
-    # Query DynamoDB
+    # Retrieve the record using its primary key
     response = club_table.get_item(
-        Key={"id": club_id}
+        Key={
+            "id": club_id
+        }
     )
 
-    # Extract club record
+    # Extract the returned item
     club = response.get("Item")
 
-    # Return null if club does not exist
+    # Handle nonexistent clubs
     if club is None:
         return None
 
-    # Return data matching GraphQL ClubSummary
+    # Return data matching ClubSummary
     return {
         "id": club["id"],
         "name": club["name"],
