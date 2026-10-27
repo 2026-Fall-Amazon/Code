@@ -10,6 +10,19 @@
 
 > **Start here:** The infrastructure is provisioned and the Python Lambda template has been tested. Application screens, API integrations, club-specific authorization, and production security are **the development team's work**, not completed functionality. Do not treat this environment as approved for confidential student or club financial information.
 
+
+## AWS Architecture
+
+The SIBC Amazon Club Platform uses a serverless
+architecture built on AWS Amplify Gen 2.
+
+![AWS Architecture Diagram](docs/images/aws-architecture.png)
+
+*Example backend workflow: React → AppSync → Python Lambda
+→ DynamoDB / S3. The AppSync-to-Lambda integration must
+be configured when implementing the relevant feature.*
+
+
 ## 1. Quick start (application developers)
 
 1. Get access to the [GitHub repository](https://github.com/2026-Fall-Amazon/Code) and follow its [README](https://github.com/2026-Fall-Amazon/Code#readme) to configure GitHub SSH and the weekly branch workflow.
