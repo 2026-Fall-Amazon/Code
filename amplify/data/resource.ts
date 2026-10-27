@@ -9,7 +9,7 @@ import { pythonTemplate } from '../functions/python-template/resource';
 
 const schema = a.schema({
 
-  // Student profile
+  // Student profiles
   UserProfile: a.model({
     displayName: a.string().required(),
     major: a.string(),
@@ -36,7 +36,7 @@ const schema = a.schema({
     allow.group('ADMINS')
   ]),
 
-  // Student-club membership
+  // Student-club memberships
   Membership: a.model({
     clubId: a.id().required(),
   })
@@ -93,21 +93,21 @@ const schema = a.schema({
     allow.group('ADMINS')
   ]),
 
-  // Response type for Python Lambda
+  // Data structure returned by Python Lambda
   ClubSummary: a.customType({
     id: a.id().required(),
     name: a.string().required(),
     description: a.string(),
   }),
 
-  // Custom GraphQL query invoking Python Lambda
+  // AppSync query connected to Python Lambda
   getClubFromPython: a.query()
     .arguments({
       clubId: a.id().required(),
     })
     .returns(a.ref('ClubSummary'))
     .authorization(allow => [
-      allow.authenticated(),
+      allow.authenticated()
     ])
     .handler(a.handler.function(pythonTemplate)),
 

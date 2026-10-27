@@ -7,7 +7,7 @@ import { data } from './data/resource';
 import { storage } from './storage/resource';
 import { pythonTemplate } from './functions/python-template/resource';
 
-// Register AWS resources
+// Register all existing AWS resources
 const backend = defineBackend({
   auth,
   data,
@@ -15,16 +15,16 @@ const backend = defineBackend({
   pythonTemplate,
 });
 
-// Reference the existing Club DynamoDB table
+// Get the existing DynamoDB Club table
 const clubTable = backend.data.resources.tables['Club'];
 
-// Reference the existing Python Lambda function
+// Get the existing Python Lambda function
 const lambda = backend.pythonTemplate.resources.lambda;
 
-// Grant the Lambda read-only access to Club records
+// Give Lambda read-only access to the Club table
 clubTable.grantReadData(lambda);
 
-// Pass the generated DynamoDB table name to Python
+// Pass the physical DynamoDB table name to Lambda
 (lambda as LambdaFunction).addEnvironment(
   'CLUB_TABLE_NAME',
   clubTable.tableName
