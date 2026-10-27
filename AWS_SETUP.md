@@ -16,7 +16,7 @@
 The SIBC Amazon Club Platform uses a serverless
 architecture built on AWS Amplify Gen 2.
 
-![AWS Architecture Diagram](docs/images/aws-architecture.png)
+![AWS Architecture Diagram](docs/images/aws_architecture.png)
 
 *Example backend workflow: React → AppSync → Python Lambda
 → DynamoDB / S3. The AppSync-to-Lambda integration must
