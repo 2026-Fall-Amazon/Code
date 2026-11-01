@@ -1,0 +1,18 @@
+@import 'tailwindcss';
+
+/* Brand tokens. Use them as Tailwind classes: bg-squid, bg-brand, text-ink, bg-page, etc. */
+@theme {
+  --color-squid: #131921;
+  --color-squid-light: #232f3e;
+  --color-brand: #ff9900;
+  --color-brand-hover: #e68a00;
+  --color-brand-soft: #febd69;
+  --color-page: #f0f2f2;
+  --color-ink: #0f1111;
+
+  --font-sans: 'Amazon Ember', Inter, 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+body {
+  @apply bg-page font-sans text-ink antialiased;
+}
