@@ -16,6 +16,7 @@ import { Card, CardTitle } from '../../components/Card'
 import { ConceptBadge, ConceptCard } from '../../components/Concept'
 import { EventCard } from '../../components/EventCard'
 import { Stat } from '../../components/Stat'
+import { ManagePosters } from '../discover/ManagePosters'
 import { formatMoney, formatShortDate } from '../../lib/format'
 import {
   announcementsForClub,
@@ -140,6 +141,7 @@ function ClubDetails({ club }: { club: Club }) {
 
         <div className="space-y-4">
           {isOfficer && <OfficerTools />}
+          {isOfficer && <ManagePosters clubId={club.id} />}
           {isOfficer && <Finances clubId={club.id} />}
           {isOfficer && <Documents clubId={club.id} />}
           {viewAs === 'member' && (
