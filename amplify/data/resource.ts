@@ -63,7 +63,7 @@ const schema = a.schema({
     location: a.string(),
     capacity: a.integer(),
     tags: a.string().array(), // e.g. "Finance", "Workshop"; used by Discover ranking
-    status: a.enum(['scheduled', 'cancelled']).default('scheduled'),
+    status: a.enum(['scheduled', 'cancelled']),
   })
   .secondaryIndexes(index => [
     index('clubId').sortKeys(['startsAt'])
@@ -105,7 +105,7 @@ const schema = a.schema({
   // records private even if a caller guesses another user's IDs.
   Notification: a.model({
     userId: a.string().required(),
-    kind: a.enum(['announcement', 'event', 'event_updated', 'event_cancelled', 'event_reminder']).required(),
+    kind: a.enum(['announcement', 'event', 'event_updated', 'event_cancelled', 'event_reminder']),
     title: a.string().required(),
     body: a.string().required(),
     clubId: a.id().required(),
