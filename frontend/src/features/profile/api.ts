@@ -1,10 +1,11 @@
 // Data calls for the Profile feature.
 // Reads and writes the UserProfile model from amplify/data/resource.ts.
 // The model's owner rule means each signed-in user can only see their own record.
-import { generateClient } from 'aws-amplify/data'
-import type { Schema } from '../../../../amplify/data/resource'
-
-const client = generateClient<Schema>({ authMode: 'userPool' })
+//
+// SessionProvider calls getMyProfile() once at sign-in, so pages should normally
+// read the profile from useCurrentUser() rather than calling this again. After
+// saving, call refreshProfile() so the rest of the app picks up the change.
+import { client, throwIfErrors } from '../../lib/dataClient'
 
 // What the form edits and what we save.
 export type ProfileInput = {
@@ -18,10 +19,23 @@ export type ProfileInput = {
 // createdAt is set by AppSync, so it only exists on saved records.
 export type SavedProfile = ProfileInput & { id: string; createdAt?: string }
 
-// Amplify returns errors in a list instead of throwing. Turn them into a normal error.
-function throwIfErrors(errors?: { message: string }[]) {
-  if (errors?.length) {
-    throw new Error(errors.map((error) => error.message).join('; '))
+type ProfileRecord = {
+  id: string
+  displayName: string
+  major?: string | null
+  graduationYear?: number | null
+  interests?: (string | null)[] | null
+  createdAt?: string | null
+}
+
+function toSavedProfile(record: ProfileRecord): SavedProfile {
+  return {
+    id: record.id,
+    displayName: record.displayName,
+    major: record.major ?? undefined,
+    graduationYear: record.graduationYear ?? undefined,
+    interests: (record.interests ?? []).filter((interest): interest is string => interest !== null),
+    createdAt: record.createdAt ?? undefined,
   }
 }
 
@@ -31,16 +45,7 @@ export async function getMyProfile(): Promise<SavedProfile | null> {
   throwIfErrors(errors)
 
   const profile = data[0]
-  if (!profile) return null
-
-  return {
-    id: profile.id,
-    displayName: profile.displayName,
-    major: profile.major ?? undefined,
-    graduationYear: profile.graduationYear ?? undefined,
-    interests: (profile.interests ?? []).filter((interest): interest is string => interest !== null),
-    createdAt: profile.createdAt ?? undefined,
-  }
+  return profile ? toSavedProfile(profile) : null
 }
 
 // Creates the profile if existingId is not given, otherwise updates it.
@@ -60,12 +65,5 @@ export async function saveMyProfile(input: ProfileInput, existingId?: string): P
 
   if (!data) throw new Error('The profile was not saved. Please try again.')
 
-  return {
-    id: data.id,
-    displayName: data.displayName,
-    major: data.major ?? undefined,
-    graduationYear: data.graduationYear ?? undefined,
-    interests: (data.interests ?? []).filter((interest): interest is string => interest !== null),
-    createdAt: data.createdAt ?? undefined,
-  }
+  return toSavedProfile(data)
 }
