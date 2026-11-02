@@ -7,6 +7,7 @@ import { BrowserRouter } from 'react-router';
 
 import outputs from '../amplify_outputs.json';
 import App from './App.tsx';
+import { SessionProvider } from './lib/session/SessionProvider';
 import './index.css';
 
 Amplify.configure(outputs);
@@ -15,9 +16,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Authenticator.Provider>
       <Authenticator>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
+        <SessionProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </SessionProvider>
       </Authenticator>
     </Authenticator.Provider>
   </React.StrictMode>
