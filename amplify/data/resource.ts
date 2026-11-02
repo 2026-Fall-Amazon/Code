@@ -16,6 +16,7 @@ const schema = a.schema({
     major: a.string(),
     graduationYear: a.integer(),
     interests: a.string().array(),
+    bio: a.string(),
     owner: a.string().authorization(allow => [
       allow.owner().to(['read', 'delete'])
     ]),

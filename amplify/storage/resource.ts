@@ -26,5 +26,14 @@ export const storage = defineStorage({
       ]),
       allow.authenticated.to(['read']),
     ],
+
+    // Profile pictures. Each user writes only to their own folder;
+    // everyone signed in can see them.
+    'profile-pictures/{entity_id}/*': [
+      allow.entity('identity').to([
+        'read', 'write', 'delete'
+      ]),
+      allow.authenticated.to(['read']),
+    ],
   }),
 });
