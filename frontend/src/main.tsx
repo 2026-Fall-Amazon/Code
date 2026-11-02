@@ -14,7 +14,7 @@ Amplify.configure(outputs);
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Authenticator.Provider>
-      <Authenticator>
+      <Authenticator signUpAttributes={['name']}>
         <BrowserRouter>
           <App />
         </BrowserRouter>
