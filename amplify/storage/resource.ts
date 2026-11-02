@@ -17,5 +17,14 @@ export const storage = defineStorage({
         'read', 'write', 'delete'
       ]),
     ],
+
+    // Discover post images. Each user uploads only to their own folder;
+    // the discover Lambda checks posting rights and deletes images with posts.
+    'post-images/{entity_id}/*': [
+      allow.entity('identity').to([
+        'read', 'write', 'delete'
+      ]),
+      allow.authenticated.to(['read']),
+    ],
   }),
 });
