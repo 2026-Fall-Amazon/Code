@@ -3,12 +3,14 @@
 //
 // To build:
 // - Load the club, its events, and its announcements from the Data API.
-// - Join/Leave creates or deletes a Membership.
-// - The real role comes from the user's Membership. The "Viewing as" switch is for the demo only.
+// - Done: Join/Leave creates or deletes a real Membership (useMyClubs), and the page
+//   starts from the user's real role. The "Viewing as" switch is a demo-only override.
+//   The club itself, its events, and announcements are still mock data.
 // - The ledger and documents need new models (and S3 uploads); they aren't in the schema yet.
 // Concept only (out of scope): video and online dues payment.
 import { FileText, Megaphone, Play, Plus, Upload } from 'lucide-react'
 import { useState } from 'react'
+import { useMyClubs } from '../../lib/session/hooks'
 import { Link, useParams } from 'react-router'
 import { AnnouncementCard } from '../../components/AnnouncementCard'
 import { Button } from '../../components/Button'
@@ -24,7 +26,6 @@ import {
   documentsForClub,
   eventsForClub,
   ledgerForClub,
-  roleIn,
   sampleVideos,
 } from '../../mock/data'
 import type { Club } from '../../mock/types'
@@ -50,7 +51,28 @@ export function ClubPage() {
 }
 
 function ClubDetails({ club }: { club: Club }) {
-  const [viewAs, setViewAs] = useState<ViewAs>(roleIn(club.id) ?? 'visitor')
+  const { roleIn, hasMembership, join, leave } = useMyClubs()
+  const realRole = roleIn(club.id)
+  const realView: ViewAs = realRole === 'leader' || realRole === 'poster' ? 'officer' : realRole ? 'member' : 'visitor'
+  // The demo switch overrides the real role until the user joins or leaves.
+  const [override, setOverride] = useState<ViewAs | null>(null)
+  const viewAs = override ?? realView
+  const [busy, setBusy] = useState(false)
+  const [joinError, setJoinError] = useState<string | null>(null)
+
+  async function changeMembership(action: (clubId: string) => Promise<void>) {
+    setBusy(true)
+    setJoinError(null)
+    try {
+      await action(club.id)
+      setOverride(null)
+    } catch (e) {
+      setJoinError(e instanceof Error ? e.message : 'Something went wrong.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const isMember = viewAs !== 'visitor'
   const isOfficer = viewAs === 'officer'
   const clubEvents = eventsForClub(club.id)
@@ -58,7 +80,7 @@ function ClubDetails({ club }: { club: Club }) {
 
   return (
     <div className="space-y-4">
-      <DemoRoleSwitch value={viewAs} onChange={setViewAs} />
+      <DemoRoleSwitch value={viewAs} onChange={setOverride} />
 
       <Card className="overflow-hidden p-0">
         <div className="h-20 bg-squid-light" />
@@ -68,16 +90,23 @@ function ClubDetails({ club }: { club: Club }) {
               <h1 className="text-2xl font-bold">{club.name}</h1>
               <p className="text-sm text-gray-600">{club.category}</p>
             </div>
-            {isMember ? (
-              <Button variant="secondary" onClick={() => setViewAs('visitor')}>
+            {hasMembership(club.id) ? (
+              <Button variant="secondary" disabled={busy} onClick={() => changeMembership(leave)}>
                 Leave club
               </Button>
             ) : (
-              <Button onClick={() => setViewAs('member')}>Join club</Button>
+              <Button disabled={busy} onClick={() => changeMembership(join)}>
+                Join club
+              </Button>
             )}
           </div>
+          {joinError && (
+            <p role="alert" className="mt-2 text-sm text-red-700">
+              {joinError}
+            </p>
+          )}
           <div className="mt-4 flex flex-wrap gap-8">
-            <Stat label="Members" value={String(club.memberCount + Number(isMember) - Number(Boolean(roleIn(club.id))))} size="sm" />
+            <Stat label="Members" value={String(club.memberCount + Number(Boolean(realRole)))} size="sm" />
             <Stat label="Founded" value={String(club.foundedYear)} size="sm" />
             <Stat label="Upcoming events" value={String(clubEvents.length)} size="sm" />
           </div>

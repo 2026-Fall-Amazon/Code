@@ -1,10 +1,9 @@
 // Profile tab: name, class year, interest tags, and the user's clubs.
 //
 // Done: loads and saves the UserProfile model (name, major, graduation year, interests).
-// New accounts get the three-step setup wizard; everyone else gets "Edit profile".
+// First-time users see a setup form. "Edit profile" opens the same form.
 // Interests feed the Discover ranking.
-// Still on mock data: the "Your clubs" card (needs Membership + a per-club role).
-// Waiting on the backend deploy: bio, and the profile picture upload.
+// Still on mock data: the "Your clubs" card (needs Membership + the role field).
 import { useEffect, useState } from 'react'
 import { useAuthenticator } from '@aws-amplify/ui-react'
 import { Link } from 'react-router'
@@ -25,8 +24,6 @@ export function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
-
-  const email = user?.signInDetails?.loginId
 
   useEffect(() => {
     let cancelled = false
@@ -63,18 +60,13 @@ export function ProfilePage() {
     )
   }
 
-  // ProfileGate guarantees a record exists before the app loads, so this should
-  // not happen. Handled anyway rather than crashing on a blank page.
+  // First visit: no profile exists yet, so ask for the basics.
   if (!profile) {
-    return (
-      <Card>
-        <p className="text-sm text-gray-600">No profile found. Try reloading the page.</p>
-      </Card>
-    )
+    return <ProfileForm title="Set up your profile" onSave={handleSave} />
   }
 
   if (editing) {
-    return <ProfileForm initial={profile} onSave={handleSave} onCancel={() => setEditing(false)} />
+    return <ProfileForm title="Edit profile" initial={profile} onSave={handleSave} onCancel={() => setEditing(false)} />
   }
 
   const initials = profile.displayName
@@ -85,7 +77,10 @@ export function ProfilePage() {
     .slice(0, 2)
     .toUpperCase()
 
-  const details = [profile.graduationYear ? `Class of ${profile.graduationYear}` : null, profile.major || null]
+  const details = [
+    profile.graduationYear ? `Class of ${profile.graduationYear}` : null,
+    profile.major || null,
+  ]
     .filter(Boolean)
     .join(' · ')
 
@@ -98,7 +93,7 @@ export function ProfilePage() {
         <div className="flex-1">
           <h1 className="text-2xl font-bold">{profile.displayName}</h1>
           {details && <p className="text-sm text-gray-600">{details}</p>}
-          <p className="text-sm text-gray-500">{email}</p>
+          <p className="text-sm text-gray-500">{user?.signInDetails?.loginId}</p>
           {profile.createdAt && (
             <p className="text-xs text-gray-400">Member since {monthYear.format(new Date(profile.createdAt))}</p>
           )}

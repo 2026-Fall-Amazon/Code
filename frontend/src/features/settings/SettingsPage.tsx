@@ -3,6 +3,7 @@
 // To build:
 // - Save notification preferences (needs a new field or model).
 // - Email alerts and event reminders are "if time allows" in the product overview.
+// Done: your user ID (for leader assignment) and Admin tools (ADMINS only).
 import { useAuthenticator } from '@aws-amplify/ui-react'
 import { LogOut } from 'lucide-react'
 import { Link } from 'react-router'
@@ -10,9 +11,12 @@ import { Button } from '../../components/Button'
 import { Card, CardTitle } from '../../components/Card'
 import { PageHeader } from '../../components/PageHeader'
 import { Toggle } from '../../components/Toggle'
+import { useCurrentUser } from '../../lib/session/hooks'
+import { AdminTools, UserIdCard } from './AdminTools'
 
 export function SettingsPage() {
   const { user, signOut } = useAuthenticator((context) => [context.user])
+  const { isAdmin } = useCurrentUser()
 
   return (
     <div className="space-y-4">
@@ -44,6 +48,15 @@ export function SettingsPage() {
           <Toggle label="New events from my clubs" description="Email me when a club I'm in posts an event." />
         </div>
       </Card>
+
+      <UserIdCard />
+
+      {isAdmin && (
+        <>
+          <h2 className="pt-2 text-lg font-bold">Admin tools</h2>
+          <AdminTools />
+        </>
+      )}
     </div>
   )
 }
