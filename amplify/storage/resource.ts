@@ -26,6 +26,7 @@ export const storage = defineStorage({
       ]),
       allow.authenticated.to(['read']),
     ],
+<<<<<<< Updated upstream
 
     // Profile pictures. Each user writes only to their own folder;
     // everyone signed in can see them.
@@ -35,5 +36,7 @@ export const storage = defineStorage({
       ]),
       allow.authenticated.to(['read']),
     ],
+=======
+>>>>>>> Stashed changes
   }),
 });

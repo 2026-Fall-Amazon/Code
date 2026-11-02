@@ -1,63 +1,88 @@
-import { Clock, Image as ImageIcon, MapPin } from 'lucide-react'
-import { useState } from 'react'
-import { Link } from 'react-router'
-import { formatEventTime } from '../lib/format'
-import { clubById, myRsvpEventIds } from '../mock/data'
-import type { ClubEvent } from '../mock/types'
-import { Button } from './Button'
-import { Tag } from './Tag'
+import { Clock, Image as ImageIcon, MapPin } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router';
+import { generateClient } from 'aws-amplify/data';
+import { formatEventTime } from '../lib/format';
+import { Button } from './Button';
+import { Tag } from './Tag';
 
-type EventCardProps = {
-  event: ClubEvent
-  reason?: string
-}
+const client = generateClient();
 
-// Title, date and time, club, one flyer image, and an RSVP button.
-export function EventCard({ event, reason }: EventCardProps) {
-  const club = clubById(event.clubId)
-  const wasGoing = myRsvpEventIds.includes(event.id)
-  // TODO: create or delete an RSVP record instead of local state.
-  const [going, setGoing] = useState(wasGoing)
-  const goingCount = event.rsvpCount + Number(going) - Number(wasGoing)
+export function EventCard({ event, reason }) {
+  const [going, setGoing] = useState(false);
+  const [rsvpId, setRsvpId] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Check if the current user has already RSVP'd to this event
+  useEffect(() => {
+    async function checkRsvp() {
+      try {
+        const rsvps = await client.models.RSVP.listRSVPByEventId({ eventId: event.id });
+        if (rsvps.data.length > 0) {
+          setGoing(true);
+          setRsvpId(rsvps.data[0].id);
+        }
+      } catch (err) {
+        console.error("Failed to fetch RSVP:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    checkRsvp();
+  }, [event.id]);
+
+  // Create or delete the RSVP record in AWS
+  async function toggleRsvp() {
+    try {
+      if (going && rsvpId) {
+        await client.models.RSVP.delete({ id: rsvpId });
+        setGoing(false);
+        setRsvpId(null);
+      } else {
+        const newRsvp = await client.models.RSVP.create({ eventId: event.id });
+        setGoing(true);
+        setRsvpId(newRsvp.data.id);
+      }
+    } catch (err) {
+      console.error("RSVP action failed:", err);
+    }
+  }
 
   return (
-    <article className="flex overflow-hidden rounded-lg bg-white shadow-sm">
-      <div className="flex w-24 shrink-0 items-center justify-center bg-squid-light text-gray-400 sm:w-32">
+    <article className="flex overflow-hidden rounded-lg bg-white shadow-sm border border-gray-200">
+      <div className="flex w-24 shrink-0 items-center justify-center bg-gray-100 text-gray-400 sm:w-32">
         <ImageIcon size={28} aria-label="Event flyer" />
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-4">
         {reason && <p className="text-xs font-semibold text-amber-700">{reason}</p>}
         <h3 className="font-bold leading-snug">{event.title}</h3>
-        {club && (
-          <Link to={`/clubs/${club.id}`} className="w-fit text-sm font-medium text-gray-700 hover:underline">
-            {club.name}
-          </Link>
-        )}
+        
+        <Link to={`/clubs/${event.clubId}`} className="w-fit text-sm font-medium text-gray-700 hover:underline">
+          {event.clubName}
+        </Link>
+        
         <p className="flex items-center gap-1.5 text-sm text-gray-600">
           <Clock size={14} aria-hidden="true" />
-          {formatEventTime(event.startsAt)}
+          {event.startsAt ? new Date(event.startsAt).toLocaleString() : 'TBD'}
         </p>
+        
         {event.location && (
           <p className="flex items-center gap-1.5 text-sm text-gray-600">
             <MapPin size={14} aria-hidden="true" />
             {event.location}
           </p>
         )}
-        <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap gap-1.5">
-            {event.tags.map((tag) => (
-              <Tag key={tag}>{tag}</Tag>
-            ))}
-          </div>
-          <Button variant={going ? 'secondary' : 'primary'} onClick={() => setGoing(!going)}>
+        
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <Button 
+            variant={going ? 'secondary' : 'primary'} 
+            onClick={toggleRsvp} 
+            disabled={loading}
+          >
             {going ? 'Going ✓' : 'RSVP'}
           </Button>
         </div>
-        <p className="text-xs text-gray-500">
-          {goingCount} going
-          {event.capacity ? ` · ${event.capacity} spots` : ''}
-        </p>
       </div>
     </article>
-  )
+  );
 }
