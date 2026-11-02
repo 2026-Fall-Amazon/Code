@@ -25,6 +25,11 @@ export const storage = defineStorage({
         'read', 'write', 'delete'
       ]),
       allow.authenticated.to(['read']),
+      // ADMINS sign in with the group's IAM role, not the authenticated
+      // role, so they need their own rule to use this folder at all.
+      allow.groups(['ADMINS']).to([
+        'read', 'write', 'delete'
+      ]),
     ],
 
     // Profile pictures. Each user writes only to their own folder;
@@ -34,6 +39,11 @@ export const storage = defineStorage({
         'read', 'write', 'delete'
       ]),
       allow.authenticated.to(['read']),
+      // ADMINS sign in with the group's IAM role, not the authenticated
+      // role, so they need their own rule to use this folder at all.
+      allow.groups(['ADMINS']).to([
+        'read', 'write', 'delete'
+      ]),
     ],
   }),
 });
