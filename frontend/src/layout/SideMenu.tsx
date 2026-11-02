@@ -1,8 +1,9 @@
-import { CalendarDays, Compass, MessageCircle, Settings, Users, X } from 'lucide-react'
+import { Bell, CalendarDays, Compass, MessageCircle, Settings, Users, X } from 'lucide-react'
 import { useEffect, type ReactNode } from 'react'
 import { NavLink } from 'react-router'
 import { ConceptBadge } from '../components/Concept'
 import { useCurrentUser, useMyClubs } from '../lib/session/hooks'
+import { useNotifications } from '../features/notifications/NotificationProvider'
 
 type SideMenuProps = {
   open: boolean
@@ -12,6 +13,7 @@ type SideMenuProps = {
 export function SideMenu({ open, onClose }: SideMenuProps) {
   const { displayName } = useCurrentUser()
   const { myClubs, loading } = useMyClubs()
+  const { unreadCount } = useNotifications()
 
   useEffect(() => {
     if (!open) return
@@ -43,6 +45,14 @@ export function SideMenu({ open, onClose }: SideMenuProps) {
 
         <nav className="flex-1 overflow-y-auto py-2">
           <MenuSection title="Explore">
+            <MenuLink
+              to="/notifications"
+              icon={<Bell size={18} />}
+              onClick={onClose}
+              badge={unreadCount > 0 ? <span className="rounded-full bg-brand px-2 py-0.5 text-xs font-bold">{unreadCount}</span> : undefined}
+            >
+              Notifications
+            </MenuLink>
             <MenuLink to="/discover" icon={<Compass size={18} />} onClick={onClose}>
               Discover
             </MenuLink>
