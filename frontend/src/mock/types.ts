@@ -8,15 +8,15 @@ export type Club = {
   category: string
   website?: string
   meetingLocation?: string
-  memberCount: number // not in schema yet (could be counted from Membership)
-  foundedYear: number // not in schema yet
+  memberCount: number // real: clubMemberCounts query (stats Lambda), not a stored field
+  foundedYear: number // real: Club.foundedYear
 }
 
 export type ClubRole = 'member' | 'officer'
 
 export type Membership = {
   clubId: string
-  role: ClubRole // not in schema yet: needed for per-club officer permissions
+  role: ClubRole // real roles live in ClubRole (leader/poster), not on Membership: see lib/session/README.md
 }
 
 export type ClubEvent = {
@@ -28,8 +28,8 @@ export type ClubEvent = {
   endsAt?: string
   location?: string
   capacity?: number
-  rsvpCount: number // not in schema yet (could be counted from RSVP)
-  tags: string[] // not in schema yet
+  rsvpCount: number // real: eventRsvpCounts query (stats Lambda), not a stored field
+  tags: string[] // real: Event.tags
 }
 
 export type Announcement = {
