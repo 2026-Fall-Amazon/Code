@@ -1,29 +1,52 @@
 // A club post: club and author, text, up to four images, and a like button.
-// Leaders and the post's author also get Edit and Delete.
+// Leaders of the club and the post's author also get Edit and Delete
+// (the discover Lambda checks the same rules on the server).
 import { Heart, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { Button } from '../../components/Button'
-import { clubById } from '../../mock/data'
-import { canModify, deletePost, MAX_BODY_LENGTH, toggleLike, updatePost, useFeedState } from './feedStore'
+import { useClubs } from '../../lib/session/hooks'
+import { editPost, MAX_BODY_LENGTH, removePost, toggleLike } from './postApi'
+import { PostImage } from './PostImage'
 import { timeAgo } from './timeAgo'
-import type { Post } from './types'
+import type { FeedPost } from './types'
 
-export function PostCard({ post }: { post: Post }) {
-  const { roles, likedPostIds } = useFeedState()
+type PostCardProps = {
+  post: FeedPost
+  liked: boolean
+  canEdit: boolean
+  canDelete: boolean
+  onChange: (post: FeedPost) => void
+  onLikeChange: (postId: string, liked: boolean) => void
+  onRemove: (postId: string) => void
+}
+
+export function PostCard({ post, liked, canEdit, canDelete, onChange, onLikeChange, onRemove }: PostCardProps) {
+  const { clubById } = useClubs()
   const club = clubById(post.clubId)
-  const liked = likedPostIds.has(post.id)
   const [mode, setMode] = useState<'view' | 'edit' | 'confirm-delete'>('view')
   const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
 
   async function run(action: () => Promise<void>) {
+    setBusy(true)
     setError(null)
     try {
       await action()
       setMode('view')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong.')
+    } finally {
+      setBusy(false)
     }
+  }
+
+  function like() {
+    run(async () => {
+      const result = await toggleLike(post.id)
+      onLikeChange(post.id, result.liked)
+      onChange({ ...post, likeCount: result.likeCount })
+    })
   }
 
   return (
@@ -39,39 +62,52 @@ export function PostCard({ post }: { post: Post }) {
             <span className="font-bold">Unknown club</span>
           )}
           <p className="text-sm text-gray-600">
-            {post.authorName} · <time dateTime={post.createdAt}>{timeAgo(post.createdAt)}</time>
-            {post.updatedAt && <span title={`Edited ${timeAgo(post.updatedAt)}`}> · edited</span>}
+            {post.authorName} · <time dateTime={post.postedAt}>{timeAgo(post.postedAt)}</time>
+            {post.editedAt && <span title={`Edited ${timeAgo(post.editedAt)}`}> · edited</span>}
           </p>
         </div>
-        {canModify(roles, post) && mode === 'view' && (
-          <PostMenu onEdit={() => setMode('edit')} onDelete={() => setMode('confirm-delete')} />
+        {(canEdit || canDelete) && mode === 'view' && (
+          <PostMenu
+            onEdit={canEdit ? () => setMode('edit') : undefined}
+            onDelete={canDelete ? () => setMode('confirm-delete') : undefined}
+          />
         )}
       </header>
 
       {mode === 'edit' ? (
         <EditForm
           initialBody={post.body}
+          saving={busy}
           onCancel={() => {
             setError(null)
             setMode('view')
           }}
-          onSave={(body) => run(() => updatePost(post.id, body))}
+          onSave={(body) => run(async () => onChange(await editPost(post.id, body)))}
         />
       ) : (
         post.body && <p className="px-4 pb-3 whitespace-pre-wrap break-words">{post.body}</p>
       )}
 
-      {post.imageUrls.length > 0 && <ImageGrid urls={post.imageUrls} />}
+      {post.imageKeys.length > 0 && <ImageGrid paths={post.imageKeys} />}
 
       {mode === 'confirm-delete' && (
         <div className="mx-4 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md bg-red-50 p-3 text-sm">
           <span className="font-medium text-red-800">Delete this post? This can't be undone.</span>
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => setMode('view')}>
+            <Button variant="secondary" onClick={() => setMode('view')} disabled={busy}>
               Cancel
             </Button>
-            <Button className="bg-red-700 text-white hover:bg-red-800" onClick={() => run(() => deletePost(post.id))}>
-              Delete
+            <Button
+              className="bg-red-700 text-white hover:bg-red-800"
+              disabled={busy}
+              onClick={() =>
+                run(async () => {
+                  await removePost(post.id)
+                  onRemove(post.id)
+                })
+              }
+            >
+              {busy ? 'Deleting…' : 'Delete'}
             </Button>
           </div>
         </div>
@@ -88,8 +124,9 @@ export function PostCard({ post }: { post: Post }) {
           type="button"
           aria-pressed={liked}
           aria-label={liked ? 'Unlike' : 'Like'}
-          onClick={() => toggleLike(post.id)}
-          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium hover:bg-page ${
+          onClick={like}
+          disabled={busy}
+          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium hover:bg-page disabled:opacity-60 ${
             liked ? 'text-red-600' : 'text-gray-600'
           }`}
         >
@@ -112,7 +149,7 @@ function ClubAvatar({ name }: { name: string }) {
   )
 }
 
-function PostMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) {
+function PostMenu({ onEdit, onDelete }: { onEdit?: () => void; onDelete?: () => void }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -144,14 +181,18 @@ function PostMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => vo
       </button>
       {open && (
         <div role="menu" className="absolute right-0 z-10 mt-1 w-36 overflow-hidden rounded-md bg-white shadow-lg ring-1 ring-black/5">
-          <button type="button" role="menuitem" className={item} onClick={onEdit}>
-            <Pencil size={16} aria-hidden="true" />
-            Edit
-          </button>
-          <button type="button" role="menuitem" className={`${item} text-red-700`} onClick={onDelete}>
-            <Trash2 size={16} aria-hidden="true" />
-            Delete
-          </button>
+          {onEdit && (
+            <button type="button" role="menuitem" className={item} onClick={onEdit}>
+              <Pencil size={16} aria-hidden="true" />
+              Edit
+            </button>
+          )}
+          {onDelete && (
+            <button type="button" role="menuitem" className={`${item} text-red-700`} onClick={onDelete}>
+              <Trash2 size={16} aria-hidden="true" />
+              Delete
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -160,10 +201,12 @@ function PostMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => vo
 
 function EditForm({
   initialBody,
+  saving,
   onCancel,
   onSave,
 }: {
   initialBody: string
+  saving: boolean
   onCancel: () => void
   onSave: (body: string) => void
 }) {
@@ -181,11 +224,11 @@ function EditForm({
         className="w-full resize-y rounded-md border border-gray-300 p-2 outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
       />
       <div className="mt-2 flex items-center justify-end gap-2">
-        <Button variant="secondary" onClick={onCancel}>
+        <Button variant="secondary" onClick={onCancel} disabled={saving}>
           Cancel
         </Button>
-        <Button onClick={() => onSave(body)} disabled={body.trim() === initialBody.trim()}>
-          Save
+        <Button onClick={() => onSave(body)} disabled={saving || body.trim() === initialBody.trim()}>
+          {saving ? 'Saving…' : 'Save'}
         </Button>
       </div>
     </div>
@@ -193,19 +236,18 @@ function EditForm({
 }
 
 // 1 image fills the width, 2 sit side by side, 3 is one tall plus two stacked, 4 is a 2×2 grid.
-function ImageGrid({ urls }: { urls: string[] }) {
-  const shown = urls.slice(0, 4)
+function ImageGrid({ paths }: { paths: string[] }) {
+  const shown = paths.slice(0, 4)
   return (
     <div className={`grid gap-0.5 overflow-hidden ${shown.length === 1 ? '' : 'aspect-[16/10] grid-cols-2 grid-rows-2'}`}>
-      {shown.map((url, i) => (
-        <img
-          key={url}
-          src={url}
+      {shown.map((path, i) => (
+        <PostImage
+          key={path}
+          path={path}
           alt={`Image ${i + 1} of ${shown.length}`}
-          loading="lazy"
-          className={`h-full w-full bg-page object-cover ${shown.length === 1 ? 'max-h-[28rem]' : ''} ${
-            shown.length === 3 && i === 0 ? 'row-span-2' : ''
-          } ${shown.length === 2 ? 'row-span-2' : ''}`}
+          className={`h-full w-full ${shown.length === 1 ? 'aspect-[4/3] max-h-[28rem]' : ''} ${
+            (shown.length === 3 && i === 0) || shown.length === 2 ? 'row-span-2' : ''
+          }`}
         />
       ))}
     </div>

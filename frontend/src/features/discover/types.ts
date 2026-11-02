@@ -1,34 +1,31 @@
-// Shapes for the Discover feed. These match the planned backend models
-// (Post, PostLike, ClubRole), which are not in amplify/data/resource.ts yet.
-import type { ClubEvent } from '../../mock/types'
+// Shapes the Discover UI works with. postApi.ts turns the real Post, Event, and
+// ClubMemberInfo records from amplify/data/resource.ts into these.
+import type { EventCardEvent } from '../../components/EventCard'
 
-export type Post = {
+export type FeedPost = {
   id: string
   clubId: string
   authorId: string
   authorName: string
   body: string
-  imageUrls: string[] // the real model stores S3 keys; the page turns them into signed URLs
-  createdAt: string
-  updatedAt?: string // set when the post is edited
+  imageKeys: string[] // S3 paths under post-images/; PostImage turns them into URLs
   likeCount: number
+  postedAt: string
+  editedAt?: string
 }
+
+export type FeedEvent = EventCardEvent & { createdAt: string }
+
+// One row of the feed: either a post or an event. `at` is when it was posted.
+export type FeedItem =
+  | { kind: 'post'; post: FeedPost; at: string }
+  | { kind: 'event'; event: FeedEvent; at: string }
 
 // Leaders are set by ADMINS. Leaders decide which members are posters.
 export type PostingRole = 'leader' | 'poster'
 
-export type ClubRoleRecord = {
-  clubId: string
-  userId: string
-  role: PostingRole
-}
-
 export type ClubMember = {
   userId: string
   name: string
+  role: PostingRole | null
 }
-
-// One row of the feed: either a post or an event.
-export type FeedItem =
-  | { kind: 'post'; post: Post; at: string }
-  | { kind: 'event'; event: ClubEvent; at: string }

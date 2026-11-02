@@ -51,7 +51,7 @@ export function ClubPage() {
 }
 
 function ClubDetails({ club }: { club: Club }) {
-  const { roleIn, hasMembership, join, leave } = useMyClubs()
+  const { roleIn, hasMembership, isLeaderOf, join, leave } = useMyClubs()
   const realRole = roleIn(club.id)
   const realView: ViewAs = realRole === 'leader' || realRole === 'poster' ? 'officer' : realRole ? 'member' : 'visitor'
   // The demo switch overrides the real role until the user joins or leaves.
@@ -170,7 +170,8 @@ function ClubDetails({ club }: { club: Club }) {
 
         <div className="space-y-4">
           {isOfficer && <OfficerTools />}
-          {isOfficer && <ManagePosters clubId={club.id} />}
+          {/* Real leaders only (not the demo switch): the server refuses anyone else. */}
+          {isLeaderOf(club.id) && <ManagePosters clubId={club.id} />}
           {isOfficer && <Finances clubId={club.id} />}
           {isOfficer && <Documents clubId={club.id} />}
           {viewAs === 'member' && (

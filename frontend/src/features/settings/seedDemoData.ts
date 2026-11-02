@@ -1,13 +1,16 @@
-// Copies the mock clubs, events, and announcements into the real tables, so the demo
+// Copies the mock clubs, events, announcements, and Discover posts into the real tables, so the demo
 // has data. Uses the Data API as the signed-in ADMINS user, so the normal rules apply.
 // Safe to run more than once: existing records are skipped, except that missing
 // fields added later (Club.foundedYear, Event.tags) are filled in.
 //
 // Clubs keep their mock ids ("investment", "chess", ...) so existing links keep working.
-// Events and announcements get a "seed-" prefix, because EventCard treats the bare mock
-// ids ("e1") as local-only demo events.
+// Events, announcements, and posts get a "seed-" prefix, because EventCard treats the
+// bare mock ids ("e1") as local-only demo events. Post pictures are uploaded to S3 under
+// the admin's own post-images/ folder, like any post's images.
 import { client, throwIfErrors } from '../../lib/dataClient'
 import { announcements, clubs, events } from '../../mock/data'
+import { samplePosts } from '../discover/mockFeed'
+import { uploadPostImage } from '../discover/postApi'
 
 export type SeedResult = { created: number; updated: number; skipped: number }
 
@@ -99,6 +102,31 @@ export async function seedDemoData(): Promise<SeedResult> {
           body: announcement.body,
           publishedAt: toUtc(announcement.publishedAt),
         }),
+      () => null,
+      result,
+    )
+  }
+
+  for (const post of samplePosts) {
+    const id = `seed-${post.id}`
+    await upsert(
+      () => client.models.Post.get({ id }),
+      async () => {
+        // The pictures are data: URLs; fetch turns each into a file to upload.
+        const blobs = await Promise.all(post.images.map((src) => fetch(src).then((r) => r.blob())))
+        const imageKeys = await Promise.all(blobs.map(uploadPostImage))
+        return client.models.Post.create({
+          id,
+          clubId: post.clubId,
+          authorId: post.authorId,
+          authorName: post.authorName,
+          body: post.body,
+          imageKeys,
+          likeCount: post.likeCount,
+          postedAt: toUtc(post.createdAt),
+          feed: 'ALL',
+        })
+      },
       () => null,
       result,
     )

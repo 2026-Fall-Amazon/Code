@@ -1,16 +1,14 @@
-// Feed ranking for Discover. Gabriel owns this.
+// Feed ordering for Discover. Gabriel owns this.
 //
-// Right now it is newest first. Replace the inside of rankFeed() with the real
-// ranking (interests, clubs, likes, timing, RSVPs); nothing else needs to change.
-// If it later needs data the browser can't see, it can move into a Lambda.
-import type { ClubEvent } from '../../mock/types'
-import { eventPostedAt } from './mockFeed'
-import type { FeedItem, Post } from './types'
+// For now it's newest first: posts by when they were posted, events by when they
+// were created. Change the inside of rankFeed() to rank differently; nothing else
+// needs to change.
+import type { FeedEvent, FeedItem, FeedPost } from './types'
 
-export function buildFeed(posts: Post[], events: ClubEvent[]): FeedItem[] {
+export function buildFeed(posts: FeedPost[], events: FeedEvent[]): FeedItem[] {
   return [
-    ...posts.map((post): FeedItem => ({ kind: 'post', post, at: post.createdAt })),
-    ...events.map((event): FeedItem => ({ kind: 'event', event, at: eventPostedAt[event.id] ?? event.startsAt })),
+    ...posts.map((post): FeedItem => ({ kind: 'post', post, at: post.postedAt })),
+    ...events.map((event): FeedItem => ({ kind: 'event', event, at: event.createdAt })),
   ]
 }
 

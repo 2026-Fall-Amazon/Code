@@ -1,14 +1,21 @@
-// "New post" box at the top of Discover. Only shown to leaders and posters.
+// "New post" box at the top of Discover. Only shown to leaders and posters,
+// and only lists the clubs they can post for. The discover Lambda checks again.
 import { ImagePlus, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '../../components/Button'
 import { Card } from '../../components/Card'
-import type { Club } from '../../mock/types'
-import { createPost, IMAGE_TYPES, MAX_BODY_LENGTH, MAX_IMAGES, validateImages } from './feedStore'
+import type { Club } from '../../lib/session/context'
+import { IMAGE_TYPES, MAX_BODY_LENGTH, MAX_IMAGES, publishPost, validateImages } from './postApi'
+import type { FeedPost } from './types'
 
 type Attachment = { file: File; previewUrl: string }
 
-export function PostComposer({ clubs }: { clubs: Club[] }) {
+type PostComposerProps = {
+  clubs: Club[]
+  onPosted: (post: FeedPost) => void
+}
+
+export function PostComposer({ clubs, onPosted }: PostComposerProps) {
   const [pickedClubId, setClubId] = useState(clubs[0].id)
   // Fall back to the first club if the user lost posting access to the one they picked.
   const clubId = clubs.some((c) => c.id === pickedClubId) ? pickedClubId : clubs[0].id
@@ -45,10 +52,11 @@ export function PostComposer({ clubs }: { clubs: Club[] }) {
     setPosting(true)
     setError(null)
     try {
-      await createPost({ clubId, body, images: attachments.map((a) => a.file) })
+      const post = await publishPost({ clubId, body, images: attachments.map((a) => a.file) })
       attachments.forEach((a) => URL.revokeObjectURL(a.previewUrl))
       setBody('')
       setAttachments([])
+      onPosted(post)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong.')
     } finally {
@@ -97,6 +105,7 @@ export function PostComposer({ clubs }: { clubs: Club[] }) {
               <button
                 type="button"
                 onClick={() => removeAttachment(i)}
+                disabled={posting}
                 aria-label={`Remove ${a.file.name}`}
                 className="absolute -top-2 -right-2 rounded-full bg-squid p-1 text-white shadow"
               >
@@ -129,7 +138,7 @@ export function PostComposer({ clubs }: { clubs: Club[] }) {
           <Button
             variant="secondary"
             onClick={() => fileInput.current?.click()}
-            disabled={attachments.length >= MAX_IMAGES}
+            disabled={posting || attachments.length >= MAX_IMAGES}
           >
             <ImagePlus size={16} aria-hidden="true" />
             Photo
