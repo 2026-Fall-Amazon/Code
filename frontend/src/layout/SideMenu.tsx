@@ -2,7 +2,7 @@ import { CalendarDays, Compass, MessageCircle, Settings, Users, X } from 'lucide
 import { useEffect, type ReactNode } from 'react'
 import { NavLink } from 'react-router'
 import { ConceptBadge } from '../components/Concept'
-import { currentUser, myClubs } from '../mock/data'
+import { useCurrentUser, useMyClubs } from '../lib/session/hooks'
 
 type SideMenuProps = {
   open: boolean
@@ -10,6 +10,9 @@ type SideMenuProps = {
 }
 
 export function SideMenu({ open, onClose }: SideMenuProps) {
+  const { displayName } = useCurrentUser()
+  const { myClubs, loading } = useMyClubs()
+
   useEffect(() => {
     if (!open) return
     const closeOnEscape = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -32,7 +35,7 @@ export function SideMenu({ open, onClose }: SideMenuProps) {
         }`}
       >
         <div className="flex h-14 items-center justify-between bg-squid px-4 text-white">
-          <span className="font-bold">Hello, {currentUser.displayName.split(' ')[0]}</span>
+          <span className="font-bold">Hello, {displayName.split(' ')[0]}</span>
           <button type="button" onClick={onClose} aria-label="Close menu" className="rounded-md p-1.5 hover:bg-white/10">
             <X size={22} />
           </button>
@@ -55,11 +58,16 @@ export function SideMenu({ open, onClose }: SideMenuProps) {
           </MenuSection>
 
           <MenuSection title="Your clubs">
-            {myClubs().map(({ club }) => (
+            {myClubs.map(({ club }) => (
               <MenuLink key={club.id} to={`/clubs/${club.id}`} onClick={onClose}>
                 {club.name}
               </MenuLink>
             ))}
+            {!loading && myClubs.length === 0 && (
+              <li className="px-4 py-2 text-sm text-gray-500">
+                You haven't joined any clubs yet.
+              </li>
+            )}
           </MenuSection>
 
           <MenuSection title="Settings">
