@@ -7,6 +7,7 @@ import { data } from './data/resource';
 import { storage } from './storage/resource';
 import { pythonTemplate } from './functions/python-template/resource';
 import { discover } from './functions/discover/resource';
+import { stats } from './functions/stats/resource';
 
 // Register all existing AWS resources
 const backend = defineBackend({
@@ -15,6 +16,7 @@ const backend = defineBackend({
   storage,
   pythonTemplate,
   discover,
+  stats,
 });
 
 // Get the existing DynamoDB Club table
@@ -57,3 +59,15 @@ discoverLambda.addEnvironment('CLUB_ROLE_TABLE_NAME', tables['ClubRole'].tableNa
 discoverLambda.addEnvironment('MEMBERSHIP_TABLE_NAME', tables['Membership'].tableName);
 discoverLambda.addEnvironment('USER_PROFILE_TABLE_NAME', tables['UserProfile'].tableName);
 discoverLambda.addEnvironment('STORAGE_BUCKET_NAME', backend.storage.resources.bucket.bucketName);
+
+// ---------------------------------------------------------------
+// Stats Lambda: read-only member and RSVP counts
+// ---------------------------------------------------------------
+
+const statsLambda = backend.stats.resources.lambda as LambdaFunction;
+
+tables['Membership'].grantReadData(statsLambda);
+tables['RSVP'].grantReadData(statsLambda);
+
+statsLambda.addEnvironment('MEMBERSHIP_TABLE_NAME', tables['Membership'].tableName);
+statsLambda.addEnvironment('RSVP_TABLE_NAME', tables['RSVP'].tableName);

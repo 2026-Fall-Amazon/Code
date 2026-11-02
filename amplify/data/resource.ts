@@ -7,6 +7,7 @@ import {
 
 import { pythonTemplate } from '../functions/python-template/resource';
 import { discover } from '../functions/discover/resource';
+import { stats } from '../functions/stats/resource';
 
 const schema = a.schema({
 
@@ -32,6 +33,7 @@ const schema = a.schema({
     category: a.string(),
     website: a.url(),
     meetingLocation: a.string(),
+    foundedYear: a.integer(),
   })
   .authorization(allow => [
     allow.authenticated().to(['read']),
@@ -59,6 +61,7 @@ const schema = a.schema({
     endsAt: a.datetime(),
     location: a.string(),
     capacity: a.integer(),
+    tags: a.string().array(), // e.g. "Finance", "Workshop"; used by Discover ranking
   })
   .secondaryIndexes(index => [
     index('clubId').sortKeys(['startsAt'])
@@ -101,6 +104,33 @@ const schema = a.schema({
     name: a.string().required(),
     description: a.string(),
   }),
+
+  // ---------------------------------------------------------------
+  // Counts
+  // Students can only read their own Membership/RSVP records, so the
+  // read-only `stats` Lambda counts them. Each returns one row per id.
+  // ---------------------------------------------------------------
+
+  CountResult: a.customType({
+    id: a.id().required(),
+    count: a.integer().required(),
+  }),
+
+  clubMemberCounts: a.query()
+    .arguments({
+      clubIds: a.id().required().array().required(),
+    })
+    .returns(a.ref('CountResult').array())
+    .authorization(allow => [allow.authenticated()])
+    .handler(a.handler.function(stats)),
+
+  eventRsvpCounts: a.query()
+    .arguments({
+      eventIds: a.id().required().array().required(),
+    })
+    .returns(a.ref('CountResult').array())
+    .authorization(allow => [allow.authenticated()])
+    .handler(a.handler.function(stats)),
 
   // AppSync query connected to Python Lambda
   getClubFromPython: a.query()

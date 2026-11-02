@@ -65,8 +65,8 @@ function DemoDataCard() {
     setStatus(null)
     setError(null)
     try {
-      const { created, skipped } = await seedDemoData()
-      setStatus(`Done: ${created} created, ${skipped} already existed.`)
+      const { created, updated, skipped } = await seedDemoData()
+      setStatus(`Done: ${created} created, ${updated} filled in, ${skipped} already up to date.`)
       await refresh()
     } catch (e) {
       setError(message(e))
@@ -79,8 +79,8 @@ function DemoDataCard() {
     <Card>
       <CardTitle action={<span className="text-xs text-gray-500">Admins only</span>}>Demo data</CardTitle>
       <p className="mb-3 text-sm text-gray-600">
-        Adds the demo clubs, events, and announcements to the real database. Safe to run again: anything that
-        already exists is skipped.
+        Adds the demo clubs, events, and announcements to the real database. Safe to run again: existing
+        records are kept, and only missing fields are filled in.
       </p>
       <Button onClick={run} disabled={running}>
         <Database size={16} aria-hidden="true" />
