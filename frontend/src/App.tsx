@@ -6,6 +6,7 @@ import { DiscoverPage } from './features/discover/DiscoverPage'
 import { HomePage } from './features/home/HomePage'
 import { InboxPage } from './features/inbox/InboxPage'
 import { MessagesPage } from './features/messages/MessagesPage'
+import { NotificationsPage } from './features/notifications/NotificationsPage'
 import { ProfilePage } from './features/profile/ProfilePage'
 import { SettingsPage } from './features/settings/SettingsPage'
 import { AppLayout } from './layout/AppLayout'
@@ -17,6 +18,7 @@ function App() {
         {/* Bottom tabs */}
         <Route index element={<HomePage />} />
         <Route path="inbox" element={<InboxPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
         <Route path="profile" element={<ProfilePage />} />
 
         {/* Side menu */}
