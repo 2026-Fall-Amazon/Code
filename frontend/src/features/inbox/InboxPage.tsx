@@ -1,91 +1,102 @@
-import { useState, useEffect } from 'react';
-import { generateClient } from 'aws-amplify/data';
-import type { Schema } from '../../../../amplify/data/resource';
-import { Plus } from 'lucide-react';
-import { AnnouncementCard } from '../../components/AnnouncementCard';
-import type { AnnouncementCardData } from '../../components/AnnouncementCard';
-import { EventCard } from '../../components/EventCard';
-import type { EventCardEvent } from '../../components/EventCard';
-import { Button } from '../../components/Button';
-import { PageHeader } from '../../components/PageHeader';
-
-const client = generateClient<Schema>({ authMode: 'userPool' });
+import { useEffect, useState } from 'react'
+import { AnnouncementCard } from '../../components/AnnouncementCard'
+import type { AnnouncementCardData } from '../../components/AnnouncementCard'
+import { EventCard } from '../../components/EventCard'
+import type { EventCardEvent } from '../../components/EventCard'
+import { PageHeader } from '../../components/PageHeader'
+import { listAll, client } from '../../lib/dataClient'
+import { useMyClubs } from '../../lib/session/hooks'
 
 type InboxItem =
   | (AnnouncementCardData & { id: string; createdAt: string; type: 'announcement' })
-  | (EventCardEvent & { createdAt: string; type: 'event' });
+  | (EventCardEvent & { createdAt: string; type: 'event' })
+
+const errorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : 'Could not load your inbox. Please try again.'
 
 export function InboxPage() {
-  const [feedItems, setFeedItems] = useState<InboxItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const isOfficer = false;
+  const { myClubs, loading: sessionLoading, error: sessionError } = useMyClubs()
+  const [feedItems, setFeedItems] = useState<InboxItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (sessionLoading) return
+
+    let cancelled = false
+
     async function fetchInboxData() {
+      setLoading(true)
+      setError(null)
+
       try {
-        const membershipData = await client.models.Membership.list();
-        const myClubIds = membershipData.data.map(m => m.clubId);
+        const clubFeeds = await Promise.all(
+          myClubs.map(async ({ club }) => {
+            const [announcements, events] = await Promise.all([
+              listAll((nextToken) =>
+                client.models.Announcement.listAnnouncementByClubId({ clubId: club.id }, { nextToken }),
+              ),
+              listAll((nextToken) =>
+                client.models.Event.listEventByClubIdAndStartsAt({ clubId: club.id }, { nextToken }),
+              ),
+            ])
 
-        let combinedFeed: InboxItem[] = [];
+            return [
+              ...announcements.map((announcement) => ({
+                ...announcement,
+                clubName: club.name,
+                type: 'announcement' as const,
+              })),
+              ...events.map((event) => ({
+                ...event,
+                clubName: club.name,
+                type: 'event' as const,
+              })),
+            ]
+          }),
+        )
 
-        for (const clubId of myClubIds) {
-          const club = await client.models.Club.get({ id: clubId });
-          const clubName = club.data?.name || "Unknown Club";
+        const combinedFeed = clubFeeds.flat() as InboxItem[]
+        combinedFeed.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
 
-          const announcements = await client.models.Announcement.listAnnouncementByClubId({ clubId });
-          const events = await client.models.Event.listEventByClubIdAndStartsAt({ clubId });
-
-          const namedAnnouncements = announcements.data.map(a => ({ ...a, clubName, type: 'announcement' as const }));
-
-          const namedEvents = events.data.map(e => ({
-            ...e,
-            clubName,
-            type: 'event' as const,
-          }));
-
-          combinedFeed = [...combinedFeed, ...namedAnnouncements, ...namedEvents];
-        }
-
-        combinedFeed.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
-        setFeedItems(combinedFeed);
-      } catch (error) {
-        console.error("Error fetching inbox data:", error);
+        if (!cancelled) setFeedItems(combinedFeed)
+      } catch (fetchError) {
+        if (!cancelled) setError(errorMessage(fetchError))
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false)
       }
     }
-    fetchInboxData();
-  }, []);
+
+    void fetchInboxData()
+    return () => {
+      cancelled = true
+    }
+  }, [myClubs, sessionLoading])
+
+  const isLoading = sessionLoading || loading
 
   return (
     <div>
-      <PageHeader
-        title="Inbox"
-        subtitle="Announcements and events from your clubs"
-        action={
-          isOfficer && (
-            <Button>
-              <Plus size={16} aria-hidden="true" />
-              New update
-            </Button>
-          )
-        }
-      />
-      <div className="space-y-3">
-        {loading ? (
+      <PageHeader title="Inbox" subtitle="Announcements and events from your clubs" />
+      <div className="space-y-3" aria-live="polite">
+        {isLoading ? (
           <p>Loading your inbox...</p>
+        ) : sessionError ? (
+          <p role="alert">{sessionError}</p>
+        ) : error ? (
+          <p role="alert">{error}</p>
         ) : feedItems.length === 0 ? (
           <p>No new updates from your clubs.</p>
         ) : (
-          feedItems.map((item) => (
+          feedItems.map((item) =>
             item.type === 'announcement' ? (
-              <AnnouncementCard key={item.id} announcement={item} />
+              <AnnouncementCard key={`announcement-${item.id}`} announcement={item} />
             ) : (
-              <EventCard key={item.id} event={item} />
-            )
-          ))
+              <EventCard key={`event-${item.id}`} event={item} />
+            ),
+          )
         )}
       </div>
     </div>
-  );
+  )
 }
