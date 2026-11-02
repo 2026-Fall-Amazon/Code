@@ -1,55 +1,36 @@
 // Stands between sign-in and the app.
 //
-// A brand new account has a Cognito user but no UserProfile record, so the rest
-// of the app has no name, major or interests to show. This gate blocks the app
-// until that record exists, which is why Home never flashes with empty data.
+// A brand new account has a Cognito user but no UserProfile record, so pages
+// would render with no name, major or interests. This gate blocks the app until
+// that record exists, which is why Home never flashes with empty data.
 //
-// Once a profile exists this renders its children and is never seen again.
+// It reads the profile from SessionProvider rather than fetching its own, so it
+// must be rendered inside <SessionProvider>. Once a profile exists this renders
+// its children and is never seen again.
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { fetchUserAttributes } from 'aws-amplify/auth'
-import { getMyProfile, saveMyProfile } from './api'
+import { useCurrentUser } from '../../lib/session/hooks'
+import { saveMyProfile } from './api'
 import type { ProfileInput } from './api'
 import { ProfileSetup } from './ProfileSetup'
 
-type Status = 'loading' | 'setup' | 'ready' | 'error'
-
 export function ProfileGate({ children }: { children: ReactNode }) {
-  const [status, setStatus] = useState<Status>('loading')
-  const [error, setError] = useState<string | null>(null)
-  // Name and email come from the Cognito account, so setup can pre-fill them.
+  const { profile, email, loading, error, refreshProfile } = useCurrentUser()
+  // The name typed at sign-up, used to pre-fill the first setup screen.
   const [accountName, setAccountName] = useState('')
-  const [accountEmail, setAccountEmail] = useState<string | undefined>()
 
   useEffect(() => {
     let cancelled = false
-
-    async function load() {
-      try {
-        const profile = await getMyProfile()
-        if (cancelled) return
-
-        // Older accounts were created before sign-up asked for a name, so this
-        // can come back empty. The setup screen just starts blank in that case.
-        try {
-          const attributes = await fetchUserAttributes()
-          if (!cancelled) {
-            setAccountName(attributes.name ?? '')
-            setAccountEmail(attributes.email)
-          }
-        } catch {
-          // Not worth blocking setup over; the user can type their name.
-        }
-
-        if (!cancelled) setStatus(profile ? 'ready' : 'setup')
-      } catch (err) {
-        if (cancelled) return
-        setError(err instanceof Error ? err.message : 'Could not load your profile.')
-        setStatus('error')
-      }
-    }
-
-    load()
+    // Accounts created before sign-up asked for a name have none, so this can
+    // come back empty and the field just starts blank.
+    fetchUserAttributes()
+      .then((attributes) => {
+        if (!cancelled) setAccountName(attributes.name ?? '')
+      })
+      .catch(() => {
+        // Not worth blocking setup over; the user can type their name.
+      })
     return () => {
       cancelled = true
     }
@@ -57,10 +38,11 @@ export function ProfileGate({ children }: { children: ReactNode }) {
 
   async function handleSave(input: ProfileInput) {
     await saveMyProfile(input)
-    setStatus('ready')
+    // Tell the rest of the app about the new profile, which also lets this gate through.
+    await refreshProfile()
   }
 
-  if (status === 'loading') {
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-page">
         <p className="text-sm text-gray-600">Loading...</p>
@@ -68,7 +50,7 @@ export function ProfileGate({ children }: { children: ReactNode }) {
     )
   }
 
-  if (status === 'error') {
+  if (error) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-page p-4">
         <div className="max-w-md rounded-lg bg-white p-6 text-center shadow-sm">
@@ -85,8 +67,8 @@ export function ProfileGate({ children }: { children: ReactNode }) {
     )
   }
 
-  if (status === 'setup') {
-    return <ProfileSetup initialName={accountName} email={accountEmail} onSave={handleSave} />
+  if (!profile) {
+    return <ProfileSetup initialName={accountName} email={email} onSave={handleSave} />
   }
 
   return <>{children}</>
