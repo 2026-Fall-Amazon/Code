@@ -1,15 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { generateClient } from 'aws-amplify/data';
+import type { Schema } from '../../../../amplify/data/resource';
 import { Plus } from 'lucide-react';
 import { AnnouncementCard } from '../../components/AnnouncementCard';
+import type { AnnouncementCardData } from '../../components/AnnouncementCard';
 import { EventCard } from '../../components/EventCard';
+import type { EventCardEvent } from '../../components/EventCard';
 import { Button } from '../../components/Button';
 import { PageHeader } from '../../components/PageHeader';
 
-const client = generateClient();
+const client = generateClient<Schema>({ authMode: 'userPool' });
+
+type InboxItem =
+  | (AnnouncementCardData & { id: string; createdAt: string; type: 'announcement' })
+  | (EventCardEvent & { createdAt: string; type: 'event' });
 
 export function InboxPage() {
-  const [feedItems, setFeedItems] = useState([]);
+  const [feedItems, setFeedItems] = useState<InboxItem[]>([]);
   const [loading, setLoading] = useState(true);
   const isOfficer = false;
 
@@ -19,7 +26,7 @@ export function InboxPage() {
         const membershipData = await client.models.Membership.list();
         const myClubIds = membershipData.data.map(m => m.clubId);
 
-        let combinedFeed = [];
+        let combinedFeed: InboxItem[] = [];
 
         for (const clubId of myClubIds) {
           const club = await client.models.Club.get({ id: clubId });
@@ -27,22 +34,19 @@ export function InboxPage() {
 
           const announcements = await client.models.Announcement.listAnnouncementByClubId({ clubId });
           const events = await client.models.Event.listEventByClubIdAndStartsAt({ clubId });
-          
-          const namedAnnouncements = announcements.data.map(a => ({ ...a, clubName, type: 'announcement' }));
-          
-          // Map AWS Event to match EventCard props (adding tags and rsvpCount)
-          const namedEvents = events.data.map(e => ({ 
-            ...e, 
-            clubName, 
-            type: 'event',
-            tags: [],
-            rsvpCount: 0 
+
+          const namedAnnouncements = announcements.data.map(a => ({ ...a, clubName, type: 'announcement' as const }));
+
+          const namedEvents = events.data.map(e => ({
+            ...e,
+            clubName,
+            type: 'event' as const,
           }));
 
           combinedFeed = [...combinedFeed, ...namedAnnouncements, ...namedEvents];
         }
 
-        combinedFeed.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        combinedFeed.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
         setFeedItems(combinedFeed);
       } catch (error) {
         console.error("Error fetching inbox data:", error);
