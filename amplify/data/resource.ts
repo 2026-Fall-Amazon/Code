@@ -171,6 +171,9 @@ const schema = a.schema({
     allow.group('ADMINS'),
   ]),
 
+  // Custom operation names must not match the ones Amplify generates for
+  // each model (createPost, updatePost, deletePost, ...), or deploy fails.
+
   LikeResult: a.customType({
     postId: a.id().required(),
     liked: a.boolean().required(),
@@ -183,7 +186,7 @@ const schema = a.schema({
     role: a.string(), // "leader", "poster", or null for regular members
   }),
 
-  createPost: a.mutation()
+  publishPost: a.mutation()
     .arguments({
       clubId: a.id().required(),
       body: a.string(),
@@ -193,7 +196,7 @@ const schema = a.schema({
     .authorization(allow => [allow.authenticated()])
     .handler(a.handler.function(discover)),
 
-  updatePost: a.mutation()
+  editPost: a.mutation()
     .arguments({
       postId: a.id().required(),
       body: a.string(),
@@ -202,7 +205,7 @@ const schema = a.schema({
     .authorization(allow => [allow.authenticated()])
     .handler(a.handler.function(discover)),
 
-  deletePost: a.mutation()
+  removePost: a.mutation()
     .arguments({
       postId: a.id().required(),
     })

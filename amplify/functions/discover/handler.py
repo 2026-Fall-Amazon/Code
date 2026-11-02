@@ -40,9 +40,9 @@ def lambda_handler(event, context):
     """
 
     handlers = {
-        "createPost": create_post,
-        "updatePost": update_post,
-        "deletePost": delete_post,
+        "publishPost": create_post,
+        "editPost": update_post,
+        "removePost": delete_post,
         "toggleLike": toggle_like,
         "setPostingAccess": set_posting_access,
         "listClubMembers": list_club_members,
