@@ -82,7 +82,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         throwIfErrors(preferenceResult.errors)
         if (cancelled) return
         setNotifications((current) => {
-          const visible = new Map(items.filter((item) => item.inApp !== false).map((item) => [item.id, item]))
+          const visible = new Map<string, Notification>(items.filter((item) => item.inApp !== false).map((item) => [item.id, item]))
           for (const item of current) {
             if (item.userId === userId && item.inApp !== false && !visible.has(item.id)) visible.set(item.id, item)
           }
