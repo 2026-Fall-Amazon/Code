@@ -9,6 +9,7 @@ import outputs from '../amplify_outputs.json';
 import App from './App.tsx';
 import { SessionProvider } from './lib/session/SessionProvider';
 import { ProfileGate } from './features/profile/ProfileGate.tsx';
+import { SignInLayout } from './layout/SignInLayout';
 import './index.css';
 
 Amplify.configure(outputs);
@@ -16,6 +17,7 @@ Amplify.configure(outputs);
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Authenticator.Provider>
+      <SignInLayout>
       {/* signUpAttributes adds a Name box to the sign-up form; formFields puts it
           first. The name is stored on the Cognito user, and ProfileGate uses it to
           pre-fill the first setup screen. */}
@@ -40,6 +42,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           </ProfileGate>
         </SessionProvider>
       </Authenticator>
+      </SignInLayout>
     </Authenticator.Provider>
   </React.StrictMode>
 );

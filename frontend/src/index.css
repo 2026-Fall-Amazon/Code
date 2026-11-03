@@ -16,3 +16,50 @@
 body {
   @apply bg-page font-sans text-ink antialiased;
 }
+
+/* Amplify's sign-in screen (Authenticator), restyled with the brand tokens above.
+   These override Amplify's own --amplify-* variables only inside the sign-in form. */
+[data-amplify-authenticator] {
+  --amplify-fonts-default-variable: var(--font-sans);
+  --amplify-fonts-default-static: var(--font-sans);
+  --amplify-colors-font-primary: var(--color-ink);
+  --amplify-colors-font-interactive: var(--color-amber-700);
+  --amplify-colors-border-focus: var(--color-brand);
+  --amplify-radii-small: 0.375rem;
+  --amplify-radii-medium: 0.375rem;
+
+  /* Card: white, no border, rounded-lg, shadow-sm */
+  --amplify-components-authenticator-router-border-width: 0;
+  --amplify-components-authenticator-router-box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+
+  /* Primary button: amber with dark text, like <Button> */
+  --amplify-components-button-primary-background-color: var(--color-brand);
+  --amplify-components-button-primary-hover-background-color: var(--color-brand-hover);
+  --amplify-components-button-primary-focus-background-color: var(--color-brand-hover);
+  --amplify-components-button-primary-active-background-color: var(--color-brand-hover);
+  --amplify-components-button-primary-color: var(--color-gray-900);
+  --amplify-components-button-primary-hover-color: var(--color-gray-900);
+  --amplify-components-button-primary-focus-color: var(--color-gray-900);
+  --amplify-components-button-primary-active-color: var(--color-gray-900);
+
+  /* Links such as "Forgot your password?" */
+  --amplify-components-button-link-color: var(--color-amber-700);
+  --amplify-components-button-link-hover-color: var(--color-amber-800);
+  --amplify-components-button-link-hover-background-color: var(--color-amber-50);
+  --amplify-components-button-link-focus-color: var(--color-amber-800);
+  --amplify-components-button-link-active-color: var(--color-amber-800);
+
+  /* Sign In / Create Account tabs: dark text, amber underline */
+  --amplify-components-tabs-item-active-color: var(--color-ink);
+  --amplify-components-tabs-item-active-border-color: var(--color-brand);
+  --amplify-components-tabs-item-hover-color: var(--color-ink);
+  --amplify-components-tabs-item-focus-color: var(--color-ink);
+
+  /* Input focus ring, like the app's search box */
+  --amplify-components-fieldcontrol-focus-box-shadow: 0 0 0 2px rgb(255 153 0 / 0.3);
+}
+
+[data-amplify-authenticator] [data-amplify-router] {
+  border-radius: 0.5rem;
+  overflow: hidden;
+}

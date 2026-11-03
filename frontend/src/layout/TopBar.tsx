@@ -1,12 +1,7 @@
 import { Bell, Menu, Search } from 'lucide-react'
 import { Link } from 'react-router'
-import { APP_NAME } from '../config'
+import { BrandName } from '../components/BrandName'
 import { useNotifications } from '../features/notifications/NotificationProvider'
-
-// The last word of the name is shown in brand gold ("Amazon" white, "Campus" gold).
-const lastSpace = APP_NAME.lastIndexOf(' ')
-const nameStart = APP_NAME.slice(0, lastSpace + 1)
-const nameEnd = APP_NAME.slice(lastSpace + 1)
 
 export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
   const { unreadCount } = useNotifications()
@@ -23,8 +18,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
           <Menu size={24} />
         </button>
         <Link to="/" className="text-lg font-bold tracking-tight">
-          {nameStart}
-          <span className="text-brand">{nameEnd}.</span>
+          <BrandName />
         </Link>
 
         {/* Wide screens: a search field that opens the Clubs page. */}
