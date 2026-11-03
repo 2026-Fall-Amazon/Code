@@ -3,6 +3,11 @@ import { Link } from 'react-router'
 import { APP_NAME } from '../config'
 import { useNotifications } from '../features/notifications/NotificationProvider'
 
+// The last word of the name is shown in brand gold ("Amazon" white, "Campus" gold).
+const lastSpace = APP_NAME.lastIndexOf(' ')
+const nameStart = APP_NAME.slice(0, lastSpace + 1)
+const nameEnd = APP_NAME.slice(lastSpace + 1)
+
 export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
   const { unreadCount } = useNotifications()
 
@@ -18,8 +23,8 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
           <Menu size={24} />
         </button>
         <Link to="/" className="text-lg font-bold tracking-tight">
-          {APP_NAME}
-          <span className="text-brand">.</span>
+          {nameStart}
+          <span className="text-brand">{nameEnd}.</span>
         </Link>
 
         {/* Wide screens: a search field that opens the Clubs page. */}
