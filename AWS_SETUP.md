@@ -29,7 +29,7 @@ Amplify orchestrates everything
 
 ## 1. Quick start (application developers)
 
-1. Get access to the [GitHub repository](https://github.com/2026-Fall-Amazon/Code) and follow its [README](https://github.com/2026-Fall-Amazon/Code#readme) to configure GitHub SSH and the weekly branch workflow.
+1. Get access to the [GitHub repository](https://github.com/2026-Fall-Amazon/Code) and follow [INSTRUCTIONS.md](INSTRUCTIONS.md) to configure GitHub SSH and the weekly branch workflow.
 2. Install a compatible **Node.js LTS**, npm, Git, and VS Code. Clone the repo if you have not already:
 
    ```bash
@@ -132,7 +132,8 @@ Code/
 ├── package.json                         # Root/backend dependencies
 ├── package-lock.json                    # Locked root dependencies
 ├── .gitignore
-└── README.md                            # Existing Git/SSH/branch instructions
+├── README.md                            # Project overview
+└── INSTRUCTIONS.md                      # Git/SSH/branch instructions
 ```
 
 **Infrastructure as code:** `amplify/backend.ts` declares the resources that are deployed. Each `resource.ts` defines configuration, models or permissions. The `main` branch in GitHub is the source of truth. **Do not manually create replacement Cognito pools, DynamoDB tables, or S3 buckets**, or modify Amplify-managed resources directly in the AWS Console unless the leads have approved an exceptional change.
@@ -212,7 +213,7 @@ The sample `handler.py` returns HTTP-like status `200` and a JSON message: `SIBC
 
 ## 9. GitHub and Amplify deployment workflow
 
-The repository's `README.md` documents SSH setup, pull requests, and its required **`week_last_first`** naming convention, where `00` represents the first week. Follow that convention for new team branches. Do not work directly on `main`.
+The repository's [`INSTRUCTIONS.md`](INSTRUCTIONS.md) documents SSH setup, pull requests, and its required **`week_last_first`** naming convention, where `00` represents the first week. Follow that convention for new team branches. Do not work directly on `main`.
 
 Typical commands from the repository root:
 
@@ -309,6 +310,6 @@ When asking for help, share the **first relevant error**, failing build phase, a
 - [Amplify Storage access control](https://docs.amplify.aws/javascript/build-a-backend/storage/authorization/)
 - [AWS Free plan FAQ](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/free-tier-FAQ.html)
 - [AWS Amplify deployment service role](https://docs.aws.amazon.com/amplify/latest/userguide/amplify-service-role.html)
-- [GitHub development workflow — project README](https://github.com/2026-Fall-Amazon/Code#readme)
+- [GitHub development workflow — INSTRUCTIONS.md](INSTRUCTIONS.md)
 
 **Owner:** SIBC Amazon project leads. Update this file through a reviewed pull request whenever infrastructure, access rules, account status or deployed services change.
