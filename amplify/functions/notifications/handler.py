@@ -24,7 +24,7 @@ clubs = dynamodb.Table(os.environ["CLUB_TABLE_NAME"])
 rsvps = dynamodb.Table(os.environ["RSVP_TABLE_NAME"])
 
 MEMBERS_BY_CLUB_INDEX = "membershipsByClubId"
-RSVPS_BY_EVENT_INDEX = "rsvpsByEventId"
+RSVPS_BY_EVENT_INDEX = "rSVPSByEventId"  # Amplify's generated name for RSVP's eventId index
 NOTIFICATIONS_BY_USER_INDEX = "byUser"
 NOTIFICATIONS_BY_EMAIL_STATUS_INDEX = "byEmailStatus"
 SES_FROM_EMAIL = os.environ.get("SES_FROM_EMAIL", "").strip()

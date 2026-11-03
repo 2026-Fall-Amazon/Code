@@ -47,6 +47,16 @@ clubTable.grantReadData(lambda);
 const discoverLambda = backend.discover.resources.lambda as LambdaFunction;
 const tables = backend.data.resources.tables;
 
+// grantReadData() on Amplify's tables covers the table but not its indexes
+// (e.g. Membership's membershipsByClubId), so Lambdas that query an index
+// also need this, or DynamoDB returns AccessDeniedException.
+function grantIndexQueries(fn: LambdaFunction, models: string[]) {
+  fn.addToRolePolicy(new PolicyStatement({
+    actions: ['dynamodb:Query'],
+    resources: models.map((model) => `${tables[model].tableArn}/index/*`),
+  }));
+}
+
 // Read/write on the Discover tables
 tables['Post'].grantReadWriteData(discoverLambda);
 tables['PostLike'].grantReadWriteData(discoverLambda);
@@ -55,6 +65,7 @@ tables['ClubRole'].grantReadWriteData(discoverLambda);
 // Read-only: member lists and display names
 tables['Membership'].grantReadData(discoverLambda);
 tables['UserProfile'].grantReadData(discoverLambda);
+grantIndexQueries(discoverLambda, ['Membership']);
 
 // Delete a post's images when the post is deleted
 backend.storage.resources.bucket.grantDelete(discoverLambda, 'post-images/*');
@@ -73,6 +84,7 @@ const statsLambda = backend.stats.resources.lambda as LambdaFunction;
 
 tables['Membership'].grantReadData(statsLambda);
 tables['RSVP'].grantReadData(statsLambda);
+grantIndexQueries(statsLambda, ['Membership', 'RSVP']);
 
 statsLambda.addEnvironment('MEMBERSHIP_TABLE_NAME', tables['Membership'].tableName);
 statsLambda.addEnvironment('RSVP_TABLE_NAME', tables['RSVP'].tableName);
@@ -89,6 +101,7 @@ for (const model of ['Notification', 'NotificationPreference']) {
 for (const model of ['Announcement', 'Event', 'Membership', 'ClubRole', 'Club', 'RSVP']) {
   notificationTables[model].grantReadData(notificationLambda);
 }
+grantIndexQueries(notificationLambda, ['Notification', 'Membership', 'RSVP']);
 
 notificationLambda.addEnvironment('NOTIFICATION_TABLE_NAME', notificationTables['Notification'].tableName);
 notificationLambda.addEnvironment('PREFERENCE_TABLE_NAME', notificationTables['NotificationPreference'].tableName);
