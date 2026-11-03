@@ -3,7 +3,7 @@ import { ImagePlus, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '../../components/Button'
 import { Card } from '../../components/Card'
-import type { Club } from '../../mock/types'
+import type { Club } from '../../lib/session/context'
 import { createPost, IMAGE_TYPES, MAX_BODY_LENGTH, MAX_IMAGES, validateImages } from './feedStore'
 
 type Attachment = { file: File; previewUrl: string }

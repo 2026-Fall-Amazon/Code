@@ -10,7 +10,7 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { Button } from '../../components/Button'
 import { Card, CardTitle } from '../../components/Card'
-import { Tag } from '../../components/Tag'
+import { RoleBadge, Tag } from '../../components/Tag'
 import { useCurrentUser, useMyClubs } from '../../lib/session/hooks'
 import { saveMyProfile } from './api'
 import type { ProfileInput } from './api'
@@ -18,23 +18,6 @@ import { ProfileForm } from './ProfileForm'
 
 // "November 2026". Kept local to this feature so lib/format.ts stays untouched.
 const monthYear = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' })
-
-// RoleBadge in components/ only knows member and officer, and MyRole has three
-// values, so the badge is rendered here instead of changing a shared component.
-const roleLabels = { leader: 'Leader', poster: 'Poster', member: 'Member' } as const
-
-function MyRoleBadge({ role }: { role: keyof typeof roleLabels }) {
-  const highlighted = role !== 'member'
-  return (
-    <span
-      className={`rounded-full px-2 py-0.5 text-xs ${
-        highlighted ? 'bg-squid font-semibold text-brand' : 'bg-page font-medium text-gray-700'
-      }`}
-    >
-      {roleLabels[role]}
-    </span>
-  )
-}
 
 export function ProfilePage() {
   const { profile, email, refreshProfile } = useCurrentUser()
@@ -121,7 +104,7 @@ export function ProfilePage() {
               <li key={club.id}>
                 <Link to={`/clubs/${club.id}`} className="flex items-center justify-between py-3 hover:underline">
                   <span className="font-medium">{club.name}</span>
-                  <MyRoleBadge role={role} />
+                  <RoleBadge role={role} />
                 </Link>
               </li>
             ))}

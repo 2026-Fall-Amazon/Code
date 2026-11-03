@@ -79,7 +79,7 @@ function DemoDataCard() {
     <Card>
       <CardTitle action={<span className="text-xs text-gray-500">Admins only</span>}>Demo data</CardTitle>
       <p className="mb-3 text-sm text-gray-600">
-        Adds the demo clubs, events, and announcements to the real database. Safe to run again: existing
+        Adds the demo clubs, events, announcements, and Discover posts to the real database. Safe to run again: existing
         records are kept, and only missing fields are filled in.
       </p>
       <Button onClick={run} disabled={running}>

@@ -1,16 +1,17 @@
 // Club page: description, member count, founding year, events, and a Join button.
 // Officers also get posting tools, the finance ledger, and documents.
 //
+// Real data: the club, member count, upcoming events, announcements, Join/Leave, and the
+// user's role. The "Viewing as" switch is a demo-only override of that role.
+//
 // To build:
-// - Load the club, its events, and its announcements from the Data API.
-// - Done: Join/Leave creates or deletes a real Membership (useMyClubs), and the page
-//   starts from the user's real role. The "Viewing as" switch is a demo-only override.
-//   The club itself, its events, and announcements are still mock data.
-// - The ledger and documents need new models (and S3 uploads); they aren't in the schema yet.
+// - Post event / Post announcement: Event and Announcement writes are ADMINS-only in the
+//   schema, so leaders need a new rule or a Lambda first.
+// - The ledger and documents need new models (and S3 uploads); they show sample data until then.
 // Concept only (out of scope): video and online dues payment.
 import { FileText, Megaphone, Play, Plus, Upload } from 'lucide-react'
 import { useState } from 'react'
-import { useMyClubs } from '../../lib/session/hooks'
+import { useClubs, useCurrentUser, useMyClubs } from '../../lib/session/hooks'
 import { Link, useParams } from 'react-router'
 import { AnnouncementCard } from '../../components/AnnouncementCard'
 import { Button } from '../../components/Button'
@@ -19,22 +20,20 @@ import { ConceptBadge, ConceptCard } from '../../components/Concept'
 import { EventCard } from '../../components/EventCard'
 import { Stat } from '../../components/Stat'
 import { ManagePosters } from '../discover/ManagePosters'
+import { fetchClubAnnouncements, fetchClubEvents, fetchMemberCounts } from '../../lib/clubData'
 import { formatMoney, formatShortDate } from '../../lib/format'
-import {
-  announcementsForClub,
-  clubById,
-  documentsForClub,
-  eventsForClub,
-  ledgerForClub,
-  sampleVideos,
-} from '../../mock/data'
-import type { Club } from '../../mock/types'
+import type { Club } from '../../lib/session/context'
+import { useLoad } from '../../lib/useLoad'
+import { documentsForClub, ledgerForClub, sampleVideos } from '../../mock/data'
 
 type ViewAs = 'visitor' | 'member' | 'officer'
 
 export function ClubPage() {
   const { clubId = '' } = useParams()
+  const { clubById, loading } = useClubs()
   const club = clubById(clubId)
+
+  if (loading) return <p className="text-gray-600">Loading club…</p>
 
   if (!club) {
     return (
@@ -51,7 +50,8 @@ export function ClubPage() {
 }
 
 function ClubDetails({ club }: { club: Club }) {
-  const { roleIn, hasMembership, join, leave } = useMyClubs()
+  const { roleIn, hasMembership, isLeaderOf, join, leave } = useMyClubs()
+  const { isAdmin } = useCurrentUser()
   const realRole = roleIn(club.id)
   const realView: ViewAs = realRole === 'leader' || realRole === 'poster' ? 'officer' : realRole ? 'member' : 'visitor'
   // The demo switch overrides the real role until the user joins or leaves.
@@ -60,12 +60,22 @@ function ClubDetails({ club }: { club: Club }) {
   const [busy, setBusy] = useState(false)
   const [joinError, setJoinError] = useState<string | null>(null)
 
+  const { data, error: loadError, reload } = useLoad(club.id, async () => {
+    const [events, announcements, counts] = await Promise.all([
+      fetchClubEvents(club.id),
+      fetchClubAnnouncements(club.id),
+      fetchMemberCounts([club]),
+    ])
+    return { events, announcements, memberCount: counts.get(club.id) }
+  })
+
   async function changeMembership(action: (clubId: string) => Promise<void>) {
     setBusy(true)
     setJoinError(null)
     try {
       await action(club.id)
       setOverride(null)
+      reload() // refresh the member count
     } catch (e) {
       setJoinError(e instanceof Error ? e.message : 'Something went wrong.')
     } finally {
@@ -75,8 +85,8 @@ function ClubDetails({ club }: { club: Club }) {
 
   const isMember = viewAs !== 'visitor'
   const isOfficer = viewAs === 'officer'
-  const clubEvents = eventsForClub(club.id)
-  const clubAnnouncements = announcementsForClub(club.id)
+  const clubEvents = data?.events ?? []
+  const clubAnnouncements = data?.announcements ?? []
 
   return (
     <div className="space-y-4">
@@ -88,7 +98,7 @@ function ClubDetails({ club }: { club: Club }) {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h1 className="text-2xl font-bold">{club.name}</h1>
-              <p className="text-sm text-gray-600">{club.category}</p>
+              {club.category && <p className="text-sm text-gray-600">{club.category}</p>}
             </div>
             {hasMembership(club.id) ? (
               <Button variant="secondary" disabled={busy} onClick={() => changeMembership(leave)}>
@@ -100,15 +110,15 @@ function ClubDetails({ club }: { club: Club }) {
               </Button>
             )}
           </div>
-          {joinError && (
+          {(joinError ?? loadError) && (
             <p role="alert" className="mt-2 text-sm text-red-700">
-              {joinError}
+              {joinError ?? loadError}
             </p>
           )}
           <div className="mt-4 flex flex-wrap gap-8">
-            <Stat label="Members" value={String(club.memberCount + Number(Boolean(realRole)))} size="sm" />
-            <Stat label="Founded" value={String(club.foundedYear)} size="sm" />
-            <Stat label="Upcoming events" value={String(clubEvents.length)} size="sm" />
+            <Stat label="Members" value={data?.memberCount === undefined ? '…' : String(data.memberCount)} size="sm" />
+            {club.foundedYear && <Stat label="Founded" value={String(club.foundedYear)} size="sm" />}
+            <Stat label="Upcoming events" value={data ? String(clubEvents.length) : '…'} size="sm" />
           </div>
         </div>
       </Card>
@@ -117,7 +127,7 @@ function ClubDetails({ club }: { club: Club }) {
         <div className="space-y-4 md:col-span-2">
           <Card>
             <CardTitle>About</CardTitle>
-            <p className="text-sm">{club.description}</p>
+            <p className="text-sm">{club.description || 'No description yet.'}</p>
             {club.meetingLocation && (
               <p className="mt-2 text-sm text-gray-600">
                 <span className="font-medium">Meets at:</span> {club.meetingLocation}
@@ -129,7 +139,7 @@ function ClubDetails({ club }: { club: Club }) {
             <h2 className="mb-3 text-lg font-bold">Upcoming events</h2>
             <div className="space-y-3">
               {clubEvents.length ? (
-                clubEvents.map((event) => <EventCard key={event.id} event={event} />)
+                clubEvents.map((event) => <EventCard key={event.id} event={{ ...event, clubName: club.name }} />)
               ) : (
                 <p className="rounded-lg bg-white p-4 text-sm text-gray-600 shadow-sm">No events scheduled.</p>
               )}
@@ -139,11 +149,15 @@ function ClubDetails({ club }: { club: Club }) {
           <section>
             <h2 className="mb-3 text-lg font-bold">Announcements</h2>
             {isMember ? (
-              <div className="space-y-3">
-                {clubAnnouncements.map((a) => (
-                  <AnnouncementCard key={a.id} announcement={a} />
-                ))}
-              </div>
+              clubAnnouncements.length ? (
+                <div className="space-y-3">
+                  {clubAnnouncements.map((a) => (
+                    <AnnouncementCard key={a.id} announcement={{ ...a, clubName: club.name }} />
+                  ))}
+                </div>
+              ) : (
+                <p className="rounded-lg bg-white p-4 text-sm text-gray-600 shadow-sm">No announcements yet.</p>
+              )
             ) : (
               <p className="rounded-lg bg-white p-4 text-sm text-gray-600 shadow-sm">
                 Join this club to see its announcements.
@@ -170,7 +184,8 @@ function ClubDetails({ club }: { club: Club }) {
 
         <div className="space-y-4">
           {isOfficer && <OfficerTools />}
-          {isOfficer && <ManagePosters clubId={club.id} />}
+          {/* Uses real member data, so it follows the real role, not the demo switch. */}
+          {(isLeaderOf(club.id) || isAdmin) && <ManagePosters clubId={club.id} />}
           {isOfficer && <Finances clubId={club.id} />}
           {isOfficer && <Documents clubId={club.id} />}
           {viewAs === 'member' && (
@@ -234,7 +249,7 @@ function Finances({ clubId }: { clubId: string }) {
 
   return (
     <Card>
-      <CardTitle action={<span className="text-xs text-gray-500">Officers only</span>}>Finances</CardTitle>
+      <CardTitle action={<span className="text-xs text-gray-500">Officers only · sample data</span>}>Finances</CardTitle>
       <Stat label="Balance" value={formatMoney(income - expenses)} />
       <div className="mt-3 grid grid-cols-2 gap-3 border-y border-gray-100 py-3">
         <Stat label="Money in" value={formatMoney(income)} tone="positive" size="sm" />
@@ -269,7 +284,7 @@ function Finances({ clubId }: { clubId: string }) {
 function Documents({ clubId }: { clubId: string }) {
   return (
     <Card>
-      <CardTitle>Documents</CardTitle>
+      <CardTitle action={<span className="text-xs text-gray-500">Sample data</span>}>Documents</CardTitle>
       <ul className="space-y-2 text-sm">
         {documentsForClub(clubId).map((doc) => (
           <li key={doc.id} className="flex items-center gap-2">

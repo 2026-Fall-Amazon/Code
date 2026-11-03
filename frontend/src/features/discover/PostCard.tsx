@@ -1,18 +1,27 @@
 // A club post: club and author, text, up to four images, and a like button.
 // Leaders and the post's author also get Edit and Delete.
+import { getUrl } from 'aws-amplify/storage'
 import { Heart, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { Button } from '../../components/Button'
-import { clubById } from '../../mock/data'
-import { canModify, deletePost, MAX_BODY_LENGTH, toggleLike, updatePost, useFeedState } from './feedStore'
+import { useClubs, useCurrentUser, useMyClubs } from '../../lib/session/hooks'
+import { useLoad } from '../../lib/useLoad'
+import { deletePost, MAX_BODY_LENGTH, toggleLike, updatePost, useFeedState } from './feedStore'
 import { timeAgo } from './timeAgo'
 import type { Post } from './types'
 
 export function PostCard({ post }: { post: Post }) {
-  const { roles, likedPostIds } = useFeedState()
+  const { likedPostIds } = useFeedState()
+  const { clubById } = useClubs()
+  const { userId } = useCurrentUser()
+  const { isLeaderOf, canPostIn } = useMyClubs()
   const club = clubById(post.clubId)
   const liked = likedPostIds.has(post.id)
+  // Leaders can change any post in their club. Posters can change their own.
+  // The Lambda checks this again; this only decides whether to show the menu.
+  const canModify = isLeaderOf(post.clubId) || (post.authorId === userId && canPostIn(post.clubId))
+  const imageUrls = useImageUrls(post.imageKeys)
   const [mode, setMode] = useState<'view' | 'edit' | 'confirm-delete'>('view')
   const [error, setError] = useState<string | null>(null)
 
@@ -43,7 +52,7 @@ export function PostCard({ post }: { post: Post }) {
             {post.updatedAt && <span title={`Edited ${timeAgo(post.updatedAt)}`}> · edited</span>}
           </p>
         </div>
-        {canModify(roles, post) && mode === 'view' && (
+        {canModify && mode === 'view' && (
           <PostMenu onEdit={() => setMode('edit')} onDelete={() => setMode('confirm-delete')} />
         )}
       </header>
@@ -61,7 +70,7 @@ export function PostCard({ post }: { post: Post }) {
         post.body && <p className="px-4 pb-3 whitespace-pre-wrap break-words">{post.body}</p>
       )}
 
-      {post.imageUrls.length > 0 && <ImageGrid urls={post.imageUrls} />}
+      {imageUrls.length > 0 && <ImageGrid urls={imageUrls} />}
 
       {mode === 'confirm-delete' && (
         <div className="mx-4 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md bg-red-50 p-3 text-sm">
@@ -88,7 +97,7 @@ export function PostCard({ post }: { post: Post }) {
           type="button"
           aria-pressed={liked}
           aria-label={liked ? 'Unlike' : 'Like'}
-          onClick={() => toggleLike(post.id)}
+          onClick={() => run(() => toggleLike(post.id))}
           className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium hover:bg-page ${
             liked ? 'text-red-600' : 'text-gray-600'
           }`}
@@ -99,6 +108,14 @@ export function PostCard({ post }: { post: Post }) {
       </footer>
     </article>
   )
+}
+
+// Turns the post's S3 paths into short-lived signed URLs the browser can load.
+function useImageUrls(keys: string[]) {
+  const { data } = useLoad(keys.length ? keys.join('|') : null, () =>
+    Promise.all(keys.map(async (path) => (await getUrl({ path })).url.toString())),
+  )
+  return data ?? []
 }
 
 function ClubAvatar({ name }: { name: string }) {

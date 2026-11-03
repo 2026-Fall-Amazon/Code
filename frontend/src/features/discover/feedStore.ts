@@ -1,14 +1,13 @@
-// In-memory store for posts, likes, and posting roles.
-//
-// Every action here matches a planned Lambda mutation (createPost, updatePost,
-// deletePost, toggleLike, setPostingAccess). When the backend exists, swap the
-// bodies for API calls; pages only use the hooks and functions exported here.
-// The permission checks below are for the demo. The Lambda must repeat them,
-// because anything in the browser can be bypassed.
+// Discover feed state: posts and the signed-in user's likes, shared by every
+// component on the page. Each action calls the discover Lambda, which checks
+// permissions; the checks here only give faster error messages.
+import { remove, uploadData } from 'aws-amplify/storage'
 import { useSyncExternalStore } from 'react'
-import { initialLikedPostIds, initialPosts, initialRoles, ME } from './mockFeed'
-import type { ClubRoleRecord, Post, PostingRole } from './types'
+import type { Schema } from '../../../../amplify/data/resource'
+import { client, listAll, throwIfErrors } from '../../lib/dataClient'
+import type { ClubMember, Post } from './types'
 
+// Same limits as amplify/functions/discover/handler.py
 export const MAX_BODY_LENGTH = 2000
 export const MAX_IMAGES = 4
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024
@@ -17,14 +16,11 @@ export const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 type FeedState = {
   posts: Post[]
   likedPostIds: ReadonlySet<string>
-  roles: ClubRoleRecord[]
+  loading: boolean
+  error: string | null
 }
 
-let state: FeedState = {
-  posts: initialPosts,
-  likedPostIds: new Set(initialLikedPostIds),
-  roles: initialRoles,
-}
+let state: FeedState = { posts: [], likedPostIds: new Set(), loading: true, error: null }
 const listeners = new Set<() => void>()
 
 function setState(next: Partial<FeedState>) {
@@ -41,24 +37,49 @@ export function useFeedState() {
   return useSyncExternalStore(subscribe, () => state)
 }
 
-// Permissions
+type PostRecord = Schema['Post']['type']
 
-export const roleOf = (roles: ClubRoleRecord[], clubId: string, userId: string): PostingRole | undefined =>
-  roles.find((r) => r.clubId === clubId && r.userId === userId)?.role
+const toPost = (p: PostRecord): Post => ({
+  id: p.id,
+  clubId: p.clubId,
+  authorId: p.authorId,
+  authorName: p.authorName ?? 'Club member',
+  body: p.body ?? '',
+  imageKeys: (p.imageKeys ?? []).filter((key): key is string => Boolean(key)),
+  createdAt: p.postedAt,
+  updatedAt: p.editedAt ?? undefined,
+  likeCount: p.likeCount ?? 0,
+})
 
-export const canPostIn = (roles: ClubRoleRecord[], clubId: string) => Boolean(roleOf(roles, clubId, ME.userId))
+function required<T>(result: { data?: T | null; errors?: readonly { message: string }[] }) {
+  throwIfErrors(result.errors)
+  if (result.data == null) throw new Error('Something went wrong. Please try again.')
+  return result.data
+}
 
-export const isLeaderOf = (roles: ClubRoleRecord[], clubId: string) => roleOf(roles, clubId, ME.userId) === 'leader'
+const replacePost = (post: Post) => setState({ posts: state.posts.map((p) => (p.id === post.id ? post : p)) })
 
-// Leaders can change any post in their club. Posters can change their own.
-export const canModify = (roles: ClubRoleRecord[], post: Post) =>
-  isLeaderOf(roles, post.clubId) || (post.authorId === ME.userId && canPostIn(roles, post.clubId))
+// Loading
 
-function requireCanModify(postId: string) {
-  const post = state.posts.find((p) => p.id === postId)
-  if (!post) throw new Error('That post no longer exists.')
-  if (!canModify(state.roles, post)) throw new Error("You don't have permission to change this post.")
-  return post
+export async function loadFeed(userId: string) {
+  setState({ loading: true, error: null })
+  try {
+    const [posts, likes] = await Promise.all([
+      listAll((nextToken) =>
+        client.models.Post.listPostsInFeed({ feed: 'ALL' }, { sortDirection: 'DESC', nextToken }),
+      ),
+      listAll((nextToken) => client.models.PostLike.listPostLikeByUserId({ userId }, { nextToken })),
+    ])
+    setState({ posts: posts.map(toPost), likedPostIds: new Set(likes.map((like) => like.postId)), loading: false })
+  } catch (e) {
+    setState({ loading: false, error: e instanceof Error ? e.message : 'Could not load the feed.' })
+  }
+}
+
+// Leaders only (the Lambda checks): everyone in the club and their posting role.
+export async function fetchClubMembers(clubId: string): Promise<ClubMember[]> {
+  const members = required(await client.queries.listClubMembers({ clubId }))
+  return members.filter((m): m is ClubMember => m !== null)
 }
 
 // Actions
@@ -70,64 +91,59 @@ export function validateImages(files: File[]) {
   return null
 }
 
+// Uploads into the signed-in user's own post-images/{identityId}/ folder and returns the S3 path.
+export async function uploadPostImage(data: Blob, extension: string) {
+  const upload = uploadData({
+    path: ({ identityId }) => `post-images/${identityId}/${crypto.randomUUID()}.${extension}`,
+    data,
+    options: { contentType: data.type },
+  })
+  return (await upload.result).path
+}
+
 export async function createPost(input: { clubId: string; body: string; images: File[] }) {
   const body = input.body.trim()
-  if (!canPostIn(state.roles, input.clubId)) throw new Error("You can't post for this club.")
   if (!body && input.images.length === 0) throw new Error('Write something or add an image.')
   if (body.length > MAX_BODY_LENGTH) throw new Error(`Posts can be up to ${MAX_BODY_LENGTH} characters.`)
   const imageError = validateImages(input.images)
   if (imageError) throw new Error(imageError)
 
-  // Later: upload each file to S3 under post-images/{identityId}/ and send the keys.
-  const post: Post = {
-    id: crypto.randomUUID(),
-    clubId: input.clubId,
-    authorId: ME.userId,
-    authorName: ME.name,
-    body,
-    imageUrls: input.images.map((file) => URL.createObjectURL(file)),
-    createdAt: new Date().toISOString(),
-    likeCount: 0,
+  const imageKeys = await Promise.all(input.images.map((file) => uploadPostImage(file, file.type.split('/')[1])))
+
+  try {
+    const post = toPost(required(await client.mutations.publishPost({ clubId: input.clubId, body, imageKeys })))
+    setState({ posts: [post, ...state.posts] })
+    return post
+  } catch (e) {
+    // Don't leave unused images behind if the post was rejected.
+    await Promise.allSettled(imageKeys.map((path) => remove({ path })))
+    throw e
   }
-  setState({ posts: [post, ...state.posts] })
-  return post
 }
 
 export async function updatePost(postId: string, body: string) {
-  const post = requireCanModify(postId)
   const trimmed = body.trim()
-  if (!trimmed && post.imageUrls.length === 0) throw new Error('A post needs text or an image.')
   if (trimmed.length > MAX_BODY_LENGTH) throw new Error(`Posts can be up to ${MAX_BODY_LENGTH} characters.`)
-
-  setState({
-    posts: state.posts.map((p) => (p.id === postId ? { ...p, body: trimmed, updatedAt: new Date().toISOString() } : p)),
-  })
+  replacePost(toPost(required(await client.mutations.editPost({ postId, body: trimmed }))))
 }
 
 export async function deletePost(postId: string) {
-  const post = requireCanModify(postId)
-  post.imageUrls.filter((url) => url.startsWith('blob:')).forEach((url) => URL.revokeObjectURL(url))
+  required(await client.mutations.removePost({ postId }))
   setState({ posts: state.posts.filter((p) => p.id !== postId) })
 }
 
 export async function toggleLike(postId: string) {
+  const result = required(await client.mutations.toggleLike({ postId }))
   const liked = new Set(state.likedPostIds)
-  const wasLiked = liked.has(postId)
-  if (wasLiked) liked.delete(postId)
-  else liked.add(postId)
-
+  if (result.liked) liked.add(postId)
+  else liked.delete(postId)
   setState({
     likedPostIds: liked,
-    posts: state.posts.map((p) => (p.id === postId ? { ...p, likeCount: p.likeCount + (wasLiked ? -1 : 1) } : p)),
+    posts: state.posts.map((p) => (p.id === postId ? { ...p, likeCount: result.likeCount } : p)),
   })
 }
 
 // Leaders give or take away posting access. Leaders themselves are set by ADMINS.
 export async function setPostingAccess(clubId: string, userId: string, canPost: boolean) {
-  // Demo note: no leader check here, because the club page's "Viewing as" switch lets
-  // anyone preview the officer view. The Lambda must check that the caller is a leader.
-  if (roleOf(state.roles, clubId, userId) === 'leader') throw new Error("Leaders can't be changed here.")
-
-  const others = state.roles.filter((r) => !(r.clubId === clubId && r.userId === userId))
-  setState({ roles: canPost ? [...others, { clubId, userId, role: 'poster' }] : others })
+  required(await client.mutations.setPostingAccess({ clubId, userId, canPost }))
 }

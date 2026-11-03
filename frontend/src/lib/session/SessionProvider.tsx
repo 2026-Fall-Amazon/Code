@@ -5,7 +5,7 @@ import { fetchAuthSession, getCurrentUser } from 'aws-amplify/auth'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { getMyProfile } from '../../features/profile/api'
 import type { SavedProfile } from '../../features/profile/api'
-import { client, listAll, throwIfErrors } from '../dataClient'
+import { client, listAll, ownedBy, throwIfErrors } from '../dataClient'
 import { SessionContext, type Club, type ClubRoleRecord, type Membership, type Session } from './context'
 
 type SessionData = {
@@ -27,10 +27,6 @@ const emptyData: SessionData = {
   memberships: [],
   roles: [],
 }
-
-// Amplify stores record owners as "<sub>::<username>".
-const ownedBy = (owner: string | null | undefined, userId: string) =>
-  owner === userId || Boolean(owner?.startsWith(`${userId}::`))
 
 async function fetchMyMemberships(userId: string) {
   const all = await listAll((nextToken) => client.models.Membership.list({ nextToken }))

@@ -1,6 +1,6 @@
-// Shapes for the Discover feed. These match the planned backend models
-// (Post, PostLike, ClubRole), which are not in amplify/data/resource.ts yet.
-import type { ClubEvent } from '../../mock/types'
+// Shapes the Discover pages use. Posts come from the Post model; the store
+// converts each record (see toPost in feedStore.ts).
+import type { ClubEvent } from '../../lib/clubData'
 
 export type Post = {
   id: string
@@ -8,24 +8,17 @@ export type Post = {
   authorId: string
   authorName: string
   body: string
-  imageUrls: string[] // the real model stores S3 keys; the page turns them into signed URLs
-  createdAt: string
-  updatedAt?: string // set when the post is edited
+  imageKeys: string[] // S3 paths under post-images/; PostCard turns them into signed URLs
+  createdAt: string // Post.postedAt
+  updatedAt?: string // Post.editedAt, set when the post is edited
   likeCount: number
 }
 
-// Leaders are set by ADMINS. Leaders decide which members are posters.
-export type PostingRole = 'leader' | 'poster'
-
-export type ClubRoleRecord = {
-  clubId: string
-  userId: string
-  role: PostingRole
-}
-
+// A club member as returned by the listClubMembers query.
 export type ClubMember = {
   userId: string
   name: string
+  role?: string | null // "leader", "poster", or empty for regular members
 }
 
 // One row of the feed: either a post or an event.

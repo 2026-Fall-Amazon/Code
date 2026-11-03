@@ -1,14 +1,11 @@
 import { Clock, Image as ImageIcon, MapPin } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
-import { generateClient } from 'aws-amplify/data';
-import type { Schema } from '../../../amplify/data/resource';
-import { clubById, events as mockEvents, myRsvpEventIds } from '../mock/data';
+import { client, ownedBy, throwIfErrors } from '../lib/dataClient';
+import { useClubs, useCurrentUser } from '../lib/session/hooks';
 import { Button } from './Button';
 
-const client = generateClient<Schema>({ authMode: 'userPool' });
-
-// Works with real Event records (Inbox) and the mock events other pages still use.
+// Any real Event record works. Pass clubName when you already have it.
 export type EventCardEvent = {
   id: string;
   clubId: string;
@@ -16,6 +13,7 @@ export type EventCardEvent = {
   title: string;
   startsAt?: string | null;
   location?: string | null;
+  demoRsvpCount?: number | null;
 };
 
 type EventCardProps = {
@@ -23,26 +21,30 @@ type EventCardProps = {
   reason?: string;
 };
 
-// Mock events have ids like "e1" that don't exist in AWS. RSVPs for them stay local,
-// so pages still on mock data don't write junk RSVP records.
-const isMockEvent = (id: string) => mockEvents.some((e) => e.id === id);
-
 export function EventCard({ event, reason }: EventCardProps) {
-  const mock = isMockEvent(event.id);
+  const { clubById } = useClubs();
+  const { userId } = useCurrentUser();
   const clubName = event.clubName ?? clubById(event.clubId)?.name;
-  const [going, setGoing] = useState(mock && myRsvpEventIds.includes(event.id));
+  const [going, setGoing] = useState(false);
   const [rsvpId, setRsvpId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(!mock);
+  const [realCount, setRealCount] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
 
   // Check if the current user has already RSVP'd to this event
   useEffect(() => {
-    if (mock) return;
     async function checkRsvp() {
       try {
-        const rsvps = await client.models.RSVP.listRSVPByEventId({ eventId: event.id });
-        if (rsvps.data.length > 0) {
+        const [rsvps, counts] = await Promise.all([
+          client.models.RSVP.listRSVPByEventId({ eventId: event.id }),
+          client.queries.eventRsvpCounts({ eventIds: [event.id] }),
+        ]);
+        throwIfErrors(counts.errors);
+        setRealCount(counts.data?.[0]?.count ?? 0);
+        // ADMINS can read everyone's RSVPs, so look for the signed-in user's own.
+        const mine = rsvps.data.find((r) => ownedBy(r.owner, userId));
+        if (mine) {
           setGoing(true);
-          setRsvpId(rsvps.data[0].id);
+          setRsvpId(mine.id);
         }
       } catch (err) {
         console.error("Failed to fetch RSVP:", err);
@@ -51,24 +53,22 @@ export function EventCard({ event, reason }: EventCardProps) {
       }
     }
     checkRsvp();
-  }, [event.id, mock]);
+  }, [event.id, userId]);
 
   // Create or delete the RSVP record in AWS
   async function toggleRsvp() {
-    if (mock) {
-      setGoing(!going);
-      return;
-    }
     try {
       if (going && rsvpId) {
         await client.models.RSVP.delete({ id: rsvpId });
         setGoing(false);
         setRsvpId(null);
+        setRealCount((c) => (c === null ? c : Math.max(0, c - 1)));
       } else {
         const newRsvp = await client.models.RSVP.create({ eventId: event.id });
         if (!newRsvp.data) throw new Error('Could not save the RSVP.');
         setGoing(true);
         setRsvpId(newRsvp.data.id);
+        setRealCount((c) => (c === null ? c : c + 1));
       }
     } catch (err) {
       console.error("RSVP action failed:", err);
@@ -108,6 +108,9 @@ export function EventCard({ event, reason }: EventCardProps) {
           >
             {going ? 'Going ✓' : 'RSVP'}
           </Button>
+          {realCount !== null && (
+            <span className="text-xs text-gray-500">{realCount + (event.demoRsvpCount ?? 0)} going</span>
+          )}
         </div>
       </div>
     </article>

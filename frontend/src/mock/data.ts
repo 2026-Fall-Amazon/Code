@@ -1,25 +1,21 @@
-// Fake data so every page has something to show. Replace these imports with
-// Data API calls (generateClient<Schema>() from 'aws-amplify/data') as each feature is built.
+// Sample content for the demo. Pages don't read most of this directly:
+// - clubs, events, announcements, demoPosts: Settings → Admin tools saves them into the
+//   real tables (seedDemoData.ts), including demo member/RSVP counts and like counts.
+// - ledger, documents: the club page's Finances and Documents cards, until those
+//   features have backend models.
+// - chatThreads, myDues, sampleVideos: concept previews (out of scope for the MVP).
+// For real data, use lib/session/hooks and lib/clubData.
 import type {
   Announcement,
   ChatThread,
   Club,
   ClubDocument,
   ClubEvent,
-  ClubRole,
   ClubVideo,
+  DemoPost,
   DuesItem,
   LedgerEntry,
-  Membership,
-  UserProfile,
 } from './types'
-
-export const currentUser: UserProfile = {
-  displayName: 'Alex Rivera',
-  major: 'Finance',
-  graduationYear: 2028,
-  interests: ['Finance', 'Chess', 'Running', 'Service'],
-}
 
 export const clubs: Club[] = [
   {
@@ -78,12 +74,6 @@ export const clubs: Club[] = [
     memberCount: 73,
     foundedYear: 2009,
   },
-]
-
-export const memberships: Membership[] = [
-  { clubId: 'investment', role: 'officer' },
-  { clubId: 'chess', role: 'member' },
-  { clubId: 'running', role: 'member' },
 ]
 
 export const events: ClubEvent[] = [
@@ -158,8 +148,6 @@ export const events: ClubEvent[] = [
   },
 ]
 
-export const myRsvpEventIds = ['e1', 'e2', 'e3']
-
 export const announcements: Announcement[] = [
   {
     id: 'a1',
@@ -210,6 +198,85 @@ export const documents: ClubDocument[] = [
   { id: 'd1', clubId: 'investment', name: 'Club constitution.pdf', uploadedAt: '2026-08-28' },
   { id: 'd2', clubId: 'investment', name: 'Fall 2026 budget.xlsx', uploadedAt: '2026-09-05' },
   { id: 'd3', clubId: 'investment', name: 'Pitch competition teams.pdf', uploadedAt: '2026-11-03' },
+]
+
+// Discover posts. Image entries become generated placeholder pictures when seeded.
+export const demoPosts: DemoPost[] = [
+  {
+    id: 'p1',
+    clubId: 'investment',
+    authorName: 'Priya Shah',
+    body: 'Huge thanks to everyone who came out to pitch night! 40+ pitches, and the winning team takes home the trophy below. Recap slides are in the club documents.',
+    images: [{ label: 'Pitch night', from: '#232f3e', to: '#ff9900' }],
+    postedAt: '2026-10-31T21:15:00-05:00',
+    likeCount: 48,
+  },
+  {
+    id: 'p2',
+    clubId: 'running',
+    authorName: 'Dana Okafor',
+    body: 'Sunrise 10K this morning. Cold, windy, worth it.',
+    images: [
+      { label: 'Mile 1', from: '#f97316', to: '#be123c' },
+      { label: 'Mile 4', from: '#0ea5e9', to: '#1e3a8a' },
+      { label: 'Finish', from: '#22c55e', to: '#065f46' },
+    ],
+    postedAt: '2026-11-01T09:40:00-05:00',
+    likeCount: 31,
+  },
+  {
+    id: 'p3',
+    clubId: 'chess',
+    authorName: 'Jordan Lee',
+    body: 'Puzzle of the week: white to move and mate in 3. First correct answer at Blitz Night gets to pick the opening for the next simul.',
+    images: [{ label: 'Mate in 3', from: '#44403c', to: '#a8a29e' }],
+    postedAt: '2026-10-30T17:00:00-05:00',
+    likeCount: 12,
+  },
+  {
+    id: 'p4',
+    clubId: 'film',
+    authorName: 'Noor Haddad',
+    body: 'Submissions for the spring short film festival open next week. Anything under 10 minutes counts. No experience needed, we lend cameras.',
+    images: [],
+    postedAt: '2026-10-29T12:30:00-05:00',
+    likeCount: 19,
+  },
+  {
+    id: 'p5',
+    clubId: 'service',
+    authorName: 'Kai Nakamura',
+    body: 'We packed 1,200 meals at the county food bank on Saturday. Here is the crew!',
+    images: [
+      { label: 'Packing line', from: '#16a34a', to: '#0f766e' },
+      { label: 'The crew', from: '#eab308', to: '#c2410c' },
+    ],
+    postedAt: '2026-10-27T15:10:00-05:00',
+    likeCount: 64,
+  },
+  {
+    id: 'p6',
+    clubId: 'robotics',
+    authorName: 'Sofia Martins',
+    body: 'Drivetrain v2 passed its first test. Four more weeks until regionals.',
+    images: [
+      { label: 'Drivetrain', from: '#475569', to: '#0f172a' },
+      { label: 'CAD', from: '#2563eb', to: '#312e81' },
+      { label: 'Test run', from: '#9333ea', to: '#4c1d95' },
+      { label: 'Team', from: '#db2777', to: '#831843' },
+    ],
+    postedAt: '2026-10-26T20:05:00-05:00',
+    likeCount: 27,
+  },
+  {
+    id: 'p7',
+    clubId: 'investment',
+    authorName: 'Sam Patel',
+    body: 'Reminder: portfolio rebalance vote closes Friday at 5 PM. Check the club email for the ballot.',
+    images: [],
+    postedAt: '2026-10-25T10:00:00-05:00',
+    likeCount: 9,
+  },
 ]
 
 // Concept preview data (out of scope for the MVP)
@@ -268,28 +335,6 @@ export const sampleVideos: ClubVideo[] = [
 // Lookup helpers
 
 export const clubById = (id: string) => clubs.find((club) => club.id === id)
-
-export const roleIn = (clubId: string): ClubRole | undefined =>
-  memberships.find((m) => m.clubId === clubId)?.role
-
-export const myClubs = () =>
-  memberships.flatMap((m) => {
-    const club = clubById(m.clubId)
-    return club ? [{ club, role: m.role }] : []
-  })
-
-const byStart = (a: ClubEvent, b: ClubEvent) => a.startsAt.localeCompare(b.startsAt)
-const newestFirst = (a: Announcement, b: Announcement) => b.publishedAt.localeCompare(a.publishedAt)
-
-export const eventsForClub = (clubId: string) => events.filter((e) => e.clubId === clubId).sort(byStart)
-
-export const announcementsForClub = (clubId: string) =>
-  announcements.filter((a) => a.clubId === clubId).sort(newestFirst)
-
-export const myAnnouncements = () =>
-  announcements.filter((a) => roleIn(a.clubId)).sort(newestFirst)
-
-export const myRsvpEvents = () => events.filter((e) => myRsvpEventIds.includes(e.id)).sort(byStart)
 
 export const ledgerForClub = (clubId: string) => ledger.filter((entry) => entry.clubId === clubId)
 

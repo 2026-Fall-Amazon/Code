@@ -1,20 +1,22 @@
 import { ChevronRight } from 'lucide-react'
 import { Link } from 'react-router'
 import { formatEventTime } from '../lib/format'
-import { announcementsForClub, eventsForClub } from '../mock/data'
-import type { Club, ClubRole } from '../mock/types'
+import type { Announcement, ClubEvent } from '../lib/clubData'
+import type { Club, MyRole } from '../lib/session/context'
 import { RoleBadge } from './Tag'
 
 type ClubCardProps = {
   club: Club
-  role?: ClubRole
-  showLatestAnnouncement?: boolean
+  role?: MyRole
+  memberCount?: number
+  nextEvent?: ClubEvent
+  latestAnnouncement?: Announcement
 }
 
-// Name, category, member count, and next event. Home also shows the latest announcement.
-export function ClubCard({ club, role, showLatestAnnouncement = false }: ClubCardProps) {
-  const nextEvent = eventsForClub(club.id)[0]
-  const latest = showLatestAnnouncement ? announcementsForClub(club.id)[0] : undefined
+// Name, category, member count, and next event. Home also passes the latest announcement.
+// The page loads the data and passes it in, so a list of cards needs one request, not one per card.
+export function ClubCard({ club, role, memberCount, nextEvent, latestAnnouncement }: ClubCardProps) {
+  const details = [club.category, memberCount === undefined ? null : `${memberCount} members`].filter(Boolean)
 
   return (
     <Link
@@ -24,9 +26,7 @@ export function ClubCard({ club, role, showLatestAnnouncement = false }: ClubCar
       <div className="flex items-start justify-between gap-2">
         <div>
           <h3 className="font-bold group-hover:underline">{club.name}</h3>
-          <p className="text-sm text-gray-600">
-            {club.category} · {club.memberCount} members
-          </p>
+          {details.length > 0 && <p className="text-sm text-gray-600">{details.join(' · ')}</p>}
         </div>
         {role ? <RoleBadge role={role} /> : <ChevronRight size={18} className="text-gray-400" aria-hidden="true" />}
       </div>
@@ -34,10 +34,10 @@ export function ClubCard({ club, role, showLatestAnnouncement = false }: ClubCar
         <span className="font-medium text-gray-500">Next event: </span>
         {nextEvent ? `${nextEvent.title}, ${formatEventTime(nextEvent.startsAt)}` : 'None scheduled'}
       </div>
-      {latest && (
+      {latestAnnouncement && (
         <div className="text-sm">
           <span className="font-medium text-gray-500">Latest: </span>
-          {latest.title}
+          {latestAnnouncement.title}
         </div>
       )}
     </Link>

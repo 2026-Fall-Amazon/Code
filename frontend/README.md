@@ -17,7 +17,10 @@ npm --prefix frontend run dev
 | `src/layout/` | The frame around every page: top bar, side menu, bottom tabs. |
 | `src/features/<area>/` | One folder per feature area. Each page starts with a comment listing what still needs to be built. |
 | `src/components/` | Shared building blocks: `Button`, `Card`, `EventCard`, `ClubCard`, `AnnouncementCard`, `Stat`, `Tag`, `Toggle`, and the `Concept` label. |
-| `src/mock/` | Fake data and its types. Fields match `amplify/data/resource.ts`; fields marked "not in schema yet" need to be added there first. |
+| `src/lib/session/` | Who's signed in, all clubs, and the user's clubs and roles, loaded once. See its README. |
+| `src/lib/clubData.ts` | Shared reads: upcoming events, a club's events and announcements, the user's RSVPs, member counts. |
+| `src/lib/useLoad.ts` | Loads data for a page, with loading and error states. |
+| `src/mock/` | Sample content. Most of it is saved into the real database by Settings → Admin tools; the rest is for features without a backend yet (ledger, documents) and concept previews. Pages don't read it for anything that has real data. |
 | `src/lib/format.ts` | Date and money formatting. |
 | `src/index.css` | Tailwind setup and the brand color tokens. |
 | `src/config.ts` | The app name (placeholder until the team picks one). |
@@ -39,14 +42,15 @@ Cards are white with `rounded-lg shadow-sm` (use `<Card>`). Primary actions use 
 
 Features that are out of scope for the MVP (group chat and direct messages, two-way Google Calendar sync, video, collecting dues) still appear in the demo so reviewers can see where they would go. Wrap them in `<ConceptCard>` or put a `<ConceptBadge />` next to them, and leave their buttons `disabled`. Never present a concept feature as working.
 
-## Replacing mock data
+## Loading real data
 
-Swap an import from `src/mock/data` for a Data API call when your feature is ready:
+Use the shared session hooks for the user and clubs, and `useLoad` with a `lib/clubData` function for everything else:
 
-```ts
-import { generateClient } from 'aws-amplify/data'
-import type { Schema } from '../../../amplify/data/resource'
-
-const client = generateClient<Schema>()
-const { data: clubs } = await client.models.Club.list()
+```tsx
+const { userId, loading } = useCurrentUser()
+const { data: events = [] } = useLoad(loading ? null : userId, () => fetchMyRsvpEvents(userId))
 ```
+
+## Demo content
+
+The demo looks full because sample content is saved into the real database, not because pages show fake data. An ADMINS user runs **Settings → Admin tools → Demo data** once per environment. It adds clubs, events, announcements, and Discover posts (with like counts and pictures), plus `demoMemberCount`/`demoRsvpCount` numbers that are added to the real counts. To change the demo content, edit `src/mock/data.ts` and run it again (existing records are kept).

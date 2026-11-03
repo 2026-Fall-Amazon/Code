@@ -32,3 +32,8 @@ export async function listAll<T>(fetchPage: (nextToken?: string | null) => Promi
   } while (nextToken)
   return items
 }
+
+// Amplify stores record owners as "<sub>::<username>". ADMINS can read everyone's
+// Membership and RSVP records, so use this to keep only the signed-in user's own.
+export const ownedBy = (owner: string | null | undefined, userId: string) =>
+  owner === userId || Boolean(owner?.startsWith(`${userId}::`))

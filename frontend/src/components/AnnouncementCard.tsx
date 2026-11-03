@@ -1,8 +1,8 @@
 import { Megaphone } from 'lucide-react';
 import { Link } from 'react-router';
-import { clubById } from '../mock/data';
+import { useClubs } from '../lib/session/hooks';
 
-// Works with real Announcement records (Inbox) and the mock announcements other pages still use.
+// Pass clubName when you already have it; otherwise it's looked up from the loaded clubs.
 export type AnnouncementCardData = {
   clubId: string;
   clubName?: string;
@@ -13,6 +13,7 @@ export type AnnouncementCardData = {
 };
 
 export function AnnouncementCard({ announcement }: { announcement: AnnouncementCardData }) {
+  const { clubById } = useClubs();
   const clubName = announcement.clubName ?? clubById(announcement.clubId)?.name;
   const postedAt = announcement.publishedAt ?? announcement.createdAt;
 

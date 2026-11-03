@@ -1,5 +1,5 @@
-// Shapes for the mock data. Fields match amplify/data/resource.ts where a model exists.
-// Anything marked "not in schema yet" has to be added to the schema before real data can be saved.
+// Shapes for the sample content in mock/data.ts. Real pages use the generated types
+// (Schema['Club']['type'], etc.) through lib/session and lib/clubData.
 
 export type Club = {
   id: string
@@ -8,15 +8,8 @@ export type Club = {
   category: string
   website?: string
   meetingLocation?: string
-  memberCount: number // real: clubMemberCounts query (stats Lambda), not a stored field
+  memberCount: number // seeded as Club.demoMemberCount
   foundedYear: number // real: Club.foundedYear
-}
-
-export type ClubRole = 'member' | 'officer'
-
-export type Membership = {
-  clubId: string
-  role: ClubRole // real roles live in ClubRole (leader/poster), not on Membership: see lib/session/README.md
 }
 
 export type ClubEvent = {
@@ -28,7 +21,7 @@ export type ClubEvent = {
   endsAt?: string
   location?: string
   capacity?: number
-  rsvpCount: number // real: eventRsvpCounts query (stats Lambda), not a stored field
+  rsvpCount: number // seeded as Event.demoRsvpCount
   tags: string[] // real: Event.tags
 }
 
@@ -38,13 +31,6 @@ export type Announcement = {
   title: string
   body: string
   publishedAt: string
-}
-
-export type UserProfile = {
-  displayName: string
-  major?: string
-  graduationYear?: number
-  interests: string[]
 }
 
 // Not in schema yet: the simple finance ledger from the MVP list.
@@ -62,6 +48,17 @@ export type ClubDocument = {
   clubId: string
   name: string
   uploadedAt: string
+}
+
+// Seeded as Post records by Settings → Admin tools.
+export type DemoPost = {
+  id: string
+  clubId: string
+  authorName: string
+  body: string
+  images: { label: string; from: string; to: string }[] // generated placeholder pictures
+  postedAt: string
+  likeCount: number
 }
 
 // Concept previews only (out of scope for the MVP).

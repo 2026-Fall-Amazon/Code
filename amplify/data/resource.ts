@@ -35,6 +35,8 @@ const schema = a.schema({
     website: a.url(),
     meetingLocation: a.string(),
     foundedYear: a.integer(),
+    // Demo only: added to the real member count so seeded clubs don't look empty.
+    demoMemberCount: a.integer(),
   })
   .authorization(allow => [
     allow.authenticated().to(['read']),
@@ -64,6 +66,8 @@ const schema = a.schema({
     capacity: a.integer(),
     tags: a.string().array(), // e.g. "Finance", "Workshop"; used by Discover ranking
     status: a.enum(['scheduled', 'cancelled']),
+    // Demo only: added to the real RSVP count so seeded events don't look empty.
+    demoRsvpCount: a.integer(),
   })
   .secondaryIndexes(index => [
     index('clubId').sortKeys(['startsAt'])
