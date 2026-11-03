@@ -91,10 +91,6 @@ Code/
 | [frontend/src/lib/session/README.md](frontend/src/lib/session/README.md) | Signed-in user, clubs, and roles shared across pages |
 | [docs/NOTIFICATIONS.md](docs/NOTIFICATIONS.md) | Notifications, email setup, and browser alerts |
 
-## Contributing
-
-Work on a weekly branch named `week_last_first` (for example `03_Lee_Jordan`), not on `main`. Open a pull request into `main` when your work is ready. A project lead reviews changes to `amplify/`, `amplify.yml`, and `package*.json`. The full workflow is in [INSTRUCTIONS.md](INSTRUCTIONS.md).
-
 ## License
 
 Apache 2.0. See [LICENSE](LICENSE).
