@@ -1,10 +1,12 @@
-// Clubs (side menu): browse and search every club by name and category.
+// Clubs (side menu): browse and search every club by name, category, and description.
+// The search lives in the URL (?q=), so the top bar's search box can open this page with results.
 // Clubs come from the shared session; member counts and next events load here.
 //
 // To build:
 // - With about 500 clubs, consider searching on the server instead of in the browser.
 import { Search } from 'lucide-react'
 import { useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { ClubCard } from '../../components/ClubCard'
 import { PageHeader } from '../../components/PageHeader'
 import { fetchMemberCounts, fetchUpcomingEvents, nextEventByClub } from '../../lib/clubData'
@@ -14,7 +16,8 @@ import { useLoad } from '../../lib/useLoad'
 export function ClubsPage() {
   const { clubs, loading: clubsLoading, error: clubsError } = useClubs()
   const { roleIn } = useMyClubs()
-  const [query, setQuery] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const query = searchParams.get('q') ?? ''
   const [category, setCategory] = useState('All')
 
   const { data: extras } = useLoad(clubsLoading ? null : clubs.map((club) => club.id).join(','), async () => {
@@ -22,13 +25,18 @@ export function ClubsPage() {
     return { memberCounts, nextEvents: nextEventByClub(events) }
   })
 
+  // Replace the history entry so the back button skips each keystroke.
+  const setQuery = (q: string) => setSearchParams(q ? { q } : {}, { replace: true })
+  // Every word has to appear in the club's name, category, or description.
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean)
+  const matches = (club: (typeof clubs)[number]) => {
+    const text = [club.name, club.category, club.description].join(' ').toLowerCase()
+    return words.every((word) => text.includes(word))
+  }
+
   const categories = ['All', ...new Set(clubs.flatMap((club) => (club.category ? [club.category] : [])))]
   const results = clubs
-    .filter(
-      (club) =>
-        club.name.toLowerCase().includes(query.trim().toLowerCase()) &&
-        (category === 'All' || club.category === category),
-    )
+    .filter((club) => matches(club) && (category === 'All' || club.category === category))
     .sort((a, b) => a.name.localeCompare(b.name))
 
   return (
@@ -41,7 +49,8 @@ export function ClubsPage() {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by club name"
+          placeholder="Search clubs by name, category, or interest"
+          aria-label="Search clubs"
           className="h-10 flex-1 bg-transparent text-sm outline-none"
         />
       </label>
