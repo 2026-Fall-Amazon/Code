@@ -8,8 +8,8 @@
 // - Post event / Post announcement: Event and Announcement writes are ADMINS-only in the
 //   schema, so leaders need a new rule or a Lambda first.
 // - The ledger and documents need new models (and S3 uploads); they show sample data until then.
-// Concept only (out of scope): video and online dues payment.
-import { FileText, Megaphone, Play, Plus, Upload } from 'lucide-react'
+// Concept only (out of scope): video, online dues payment, and teams within a club.
+import { ChevronDown, FileText, Megaphone, Play, Plus, Settings, Upload, Users } from 'lucide-react'
 import { useState } from 'react'
 import { useClubs, useCurrentUser, useMyClubs } from '../../lib/session/hooks'
 import { Link, useParams } from 'react-router'
@@ -24,7 +24,7 @@ import { fetchClubAnnouncements, fetchClubEvents, fetchMemberCounts } from '../.
 import { formatMoney, formatShortDate } from '../../lib/format'
 import type { Club } from '../../lib/session/context'
 import { useLoad } from '../../lib/useLoad'
-import { documentsForClub, ledgerForClub, sampleVideos } from '../../mock/data'
+import { documentsForClub, ledgerForClub, sampleVideos, teamsForClub } from '../../mock/data'
 
 type ViewAs = 'visitor' | 'member' | 'officer'
 
@@ -87,6 +87,7 @@ function ClubDetails({ club }: { club: Club }) {
   const isOfficer = viewAs === 'officer'
   const clubEvents = data?.events ?? []
   const clubAnnouncements = data?.announcements ?? []
+  const teams = teamsForClub(club.id)
 
   return (
     <div className="space-y-4">
@@ -165,6 +166,8 @@ function ClubDetails({ club }: { club: Club }) {
             )}
           </section>
 
+          {teams.length > 0 && <Teams teams={teams} />}
+
           <ConceptCard title="Videos" description="Meeting recordings and event highlights would appear here.">
             <div className="grid grid-cols-2 gap-3">
               {sampleVideos.map((video) => (
@@ -183,9 +186,8 @@ function ClubDetails({ club }: { club: Club }) {
         </div>
 
         <div className="space-y-4">
-          {isOfficer && <OfficerTools />}
-          {/* Uses real member data, so it follows the real role, not the demo switch. */}
-          {(isLeaderOf(club.id) || isAdmin) && <ManagePosters clubId={club.id} />}
+          {/* "Who can post" uses real member data, so it also needs the real role. */}
+          {isOfficer && <ManageClub clubId={club.id} canManagePosters={isLeaderOf(club.id) || isAdmin} />}
           {isOfficer && <Finances clubId={club.id} />}
           {isOfficer && <Documents clubId={club.id} />}
           {viewAs === 'member' && (
@@ -224,21 +226,52 @@ function DemoRoleSwitch({ value, onChange }: { value: ViewAs; onChange: (v: View
   )
 }
 
-function OfficerTools() {
+// Officer tools and "Who can post", folded away until an officer opens them.
+function ManageClub({ clubId, canManagePosters }: { clubId: string; canManagePosters: boolean }) {
   return (
-    <Card>
-      <CardTitle>Officer tools</CardTitle>
-      <div className="grid gap-2">
-        <Button>
-          <Plus size={16} aria-hidden="true" />
-          Post event
-        </Button>
-        <Button variant="secondary">
-          <Megaphone size={16} aria-hidden="true" />
-          Post announcement
-        </Button>
+    <details className="group rounded-lg bg-white shadow-sm">
+      <summary className="flex cursor-pointer list-none items-center gap-2 p-4 font-bold [&::-webkit-details-marker]:hidden">
+        <Settings size={18} className="text-gray-500" aria-hidden="true" />
+        <span className="flex-1">Manage club</span>
+        <ChevronDown size={18} className="text-gray-500 transition-transform group-open:rotate-180" aria-hidden="true" />
+      </summary>
+      <div className="space-y-4 border-t border-gray-100 p-4">
+        <div className="grid gap-2">
+          <Button>
+            <Plus size={16} aria-hidden="true" />
+            Post event
+          </Button>
+          <Button variant="secondary">
+            <Megaphone size={16} aria-hidden="true" />
+            Post announcement
+          </Button>
+        </div>
+        {canManagePosters && <ManagePosters clubId={clubId} />}
       </div>
-    </Card>
+    </details>
+  )
+}
+
+// Sample teams inside a club (e.g. SIBC's Amazon project team). Display only.
+function Teams({ teams }: { teams: ReturnType<typeof teamsForClub> }) {
+  return (
+    <ConceptCard title="Teams" description="Smaller groups inside this club, each with its own lead, members, and updates.">
+      <ul className="grid gap-3 sm:grid-cols-2">
+        {teams.map((team) => (
+          <li key={team.id} className="flex flex-col rounded-md border border-gray-200 p-3">
+            <p className="font-semibold">{team.name}</p>
+            <p className="mt-1 flex-1 text-sm text-gray-600">{team.description}</p>
+            <p className="mt-2 flex items-center gap-1.5 text-xs text-gray-500">
+              <Users size={14} aria-hidden="true" />
+              {team.memberCount} members · Lead: {team.lead}
+            </p>
+            <Button variant="secondary" disabled className="mt-3 w-full">
+              Request to join
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </ConceptCard>
   )
 }
 

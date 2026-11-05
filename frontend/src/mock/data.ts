@@ -11,6 +11,7 @@ import type {
   Club,
   ClubDocument,
   ClubEvent,
+  ClubTeam,
   ClubVideo,
   DemoPost,
   DuesItem,
@@ -576,10 +577,48 @@ export const sampleVideos: ClubVideo[] = [
   { id: 'v2', title: 'Event highlights', duration: '3:05' },
 ]
 
+// Teams inside a club: concept only. Names and details are made up.
+export const clubTeams: ClubTeam[] = [
+  {
+    id: 't1',
+    clubId: 'sibc',
+    name: 'Amazon Project Team',
+    description: 'Building a campus clubs platform on AWS as a proof of concept for Amazon.',
+    lead: 'Taylor M.',
+    memberCount: 8,
+  },
+  {
+    id: 't2',
+    clubId: 'sibc',
+    name: 'Consulting Division',
+    description: 'Semester-long strategy projects for companies and nonprofits.',
+    lead: 'Priya S.',
+    memberCount: 46,
+  },
+  {
+    id: 't3',
+    clubId: 'sibc',
+    name: 'Investing Division',
+    description: 'Equity research teams that pitch to a student-run fund.',
+    lead: 'Marcus L.',
+    memberCount: 38,
+  },
+  {
+    id: 't4',
+    clubId: 'sibc',
+    name: 'International Development',
+    description: 'Projects with partner organizations abroad, with travel over breaks.',
+    lead: 'Sofia R.',
+    memberCount: 29,
+  },
+]
+
 // Lookup helpers
 
 export const clubById = (id: string) => clubs.find((club) => club.id === id)
 
 export const ledgerForClub = (clubId: string) => ledger.filter((entry) => entry.clubId === clubId)
+
+export const teamsForClub = (clubId: string) => clubTeams.filter((team) => team.clubId === clubId)
 
 export const documentsForClub = (clubId: string) => documents.filter((doc) => doc.clubId === clubId)

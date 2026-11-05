@@ -79,6 +79,16 @@ export type DuesItem = {
   paid: boolean
 }
 
+// A team inside a club (concept only, no backend).
+export type ClubTeam = {
+  id: string
+  clubId: string
+  name: string
+  description: string
+  lead: string
+  memberCount: number
+}
+
 export type ClubVideo = {
   id: string
   title: string
