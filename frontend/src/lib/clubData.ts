@@ -51,6 +51,21 @@ export async function fetchMyRsvpEvents(userId: string) {
   return events.flat().filter((e) => isUpcoming(e)).sort(byStart)
 }
 
+// Removes the signed-in user's RSVP to an event (every copy, in case of a double tap).
+export async function cancelRsvp(eventId: string, userId: string) {
+  const rsvps = await listAll((nextToken) => client.models.RSVP.listRSVPByEventId({ eventId }, { nextToken }))
+  // ADMINS can read everyone's RSVPs, so only delete the user's own.
+  for (const rsvp of rsvps.filter((r) => ownedBy(r.owner, userId))) {
+    const { errors } = await client.models.RSVP.delete({ id: rsvp.id })
+    throwIfErrors(errors)
+  }
+}
+
+export async function addRsvp(eventId: string) {
+  const { errors } = await client.models.RSVP.create({ eventId })
+  throwIfErrors(errors)
+}
+
 // Members per club: real members (counted by the stats Lambda, since students can't
 // read other people's memberships) plus the club's demo count.
 export async function fetchMemberCounts(clubs: Pick<Club, 'id' | 'demoMemberCount'>[]) {
