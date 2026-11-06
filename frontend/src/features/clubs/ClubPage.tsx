@@ -5,12 +5,12 @@
 // user's role. The "Viewing as" switch is a demo-only override of that role.
 //
 // To build:
-// - Post event / Post announcement: Event and Announcement writes are ADMINS-only in the
-//   schema, so leaders need a new rule or a Lambda first.
-// - The ledger and documents need new models (and S3 uploads); they show sample data until then.
-// Concept only (out of scope): video, online dues payment, and teams within a club.
-import { ChevronDown, FileText, Megaphone, Play, Plus, Settings, Upload, Users } from 'lucide-react'
-import { useState } from 'react'
+// - Post event, and Post announcement for leaders who aren't admins: Event and Announcement
+//   writes are ADMINS-only in the schema, so leaders need a new rule or a Lambda first.
+// - The ledger needs a new model; it shows sample data until then.
+// Concept only (out of scope): video, online dues payment, documents, and teams within a club.
+import { ChevronDown, FileText, ImagePlus, Megaphone, Play, Plus, Settings, Upload, Users } from 'lucide-react'
+import { useState, type FormEvent } from 'react'
 import { useClubs, useCurrentUser, useMyClubs } from '../../lib/session/hooks'
 import { Link, useParams } from 'react-router'
 import { AnnouncementCard } from '../../components/AnnouncementCard'
@@ -20,7 +20,8 @@ import { ConceptBadge, ConceptCard } from '../../components/Concept'
 import { EventCard } from '../../components/EventCard'
 import { Stat } from '../../components/Stat'
 import { ManagePosters } from '../discover/ManagePosters'
-import { fetchClubAnnouncements, fetchClubEvents, fetchMemberCounts } from '../../lib/clubData'
+import { PostComposer } from '../discover/PostComposer'
+import { fetchClubAnnouncements, fetchClubEvents, fetchMemberCounts, postAnnouncement } from '../../lib/clubData'
 import { formatMoney, formatShortDate } from '../../lib/format'
 import type { Club } from '../../lib/session/context'
 import { useLoad } from '../../lib/useLoad'
@@ -50,7 +51,7 @@ export function ClubPage() {
 }
 
 function ClubDetails({ club }: { club: Club }) {
-  const { roleIn, hasMembership, isLeaderOf, join, leave } = useMyClubs()
+  const { roleIn, hasMembership, isLeaderOf, canPostIn, join, leave } = useMyClubs()
   const { isAdmin } = useCurrentUser()
   const realRole = roleIn(club.id)
   const realView: ViewAs = realRole === 'leader' || realRole === 'poster' ? 'officer' : realRole ? 'member' : 'visitor'
@@ -187,7 +188,14 @@ function ClubDetails({ club }: { club: Club }) {
 
         <div className="space-y-4">
           {/* "Who can post" uses real member data, so it also needs the real role. */}
-          {isOfficer && <ManageClub clubId={club.id} canManagePosters={isLeaderOf(club.id) || isAdmin} />}
+          {isOfficer && (
+            <ManageClub
+              club={club}
+              canPost={canPostIn(club.id)}
+              canManagePosters={isLeaderOf(club.id) || isAdmin}
+              onAnnounced={reload}
+            />
+          )}
           {isOfficer && <Finances clubId={club.id} />}
           {isOfficer && <Documents clubId={club.id} />}
           {viewAs === 'member' && (
@@ -227,7 +235,19 @@ function DemoRoleSwitch({ value, onChange }: { value: ViewAs; onChange: (v: View
 }
 
 // Officer tools and "Who can post", folded away until an officer opens them.
-function ManageClub({ clubId, canManagePosters }: { clubId: string; canManagePosters: boolean }) {
+// Announcements are short notices for members; Discover posts go to the whole campus
+// and can have photos.
+type ManageClubProps = { club: Club; canPost: boolean; canManagePosters: boolean; onAnnounced: () => void }
+
+function ManageClub({ club, canPost, canManagePosters, onAnnounced }: ManageClubProps) {
+  const [writing, setWriting] = useState<'announcement' | 'post' | null>(null)
+  const [posted, setPosted] = useState(false)
+
+  function open(form: 'announcement' | 'post') {
+    setWriting(form)
+    setPosted(false)
+  }
+
   return (
     <details className="group rounded-lg bg-white shadow-sm">
       <summary className="flex cursor-pointer list-none items-center gap-2 p-4 font-bold [&::-webkit-details-marker]:hidden">
@@ -241,14 +261,123 @@ function ManageClub({ clubId, canManagePosters }: { clubId: string; canManagePos
             <Plus size={16} aria-hidden="true" />
             Post event
           </Button>
-          <Button variant="secondary">
-            <Megaphone size={16} aria-hidden="true" />
-            Post announcement
-          </Button>
+          {writing !== 'announcement' && (
+            <Button variant="secondary" onClick={() => open('announcement')}>
+              <Megaphone size={16} aria-hidden="true" />
+              Post announcement
+            </Button>
+          )}
+          {canPost && writing !== 'post' && (
+            <Button variant="secondary" onClick={() => open('post')}>
+              <ImagePlus size={16} aria-hidden="true" />
+              Post to Discover
+            </Button>
+          )}
         </div>
-        {canManagePosters && <ManagePosters clubId={clubId} />}
+        {posted && (
+          <p role="status" className="text-sm text-green-700">
+            Posted to Discover.{' '}
+            <Link to="/discover" className="font-semibold underline">
+              See it in the feed
+            </Link>
+          </p>
+        )}
+        {writing === 'announcement' && (
+          <AnnouncementForm
+            clubId={club.id}
+            onClose={() => setWriting(null)}
+            onPosted={() => {
+              setWriting(null)
+              onAnnounced()
+            }}
+          />
+        )}
+        {writing === 'post' && (
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <p className="font-semibold">New Discover post</p>
+              <button type="button" onClick={() => setWriting(null)} className="text-sm text-gray-600 hover:underline">
+                Cancel
+              </button>
+            </div>
+            <PostComposer
+              clubs={[club]}
+              onPosted={() => {
+                setWriting(null)
+                setPosted(true)
+              }}
+            />
+          </div>
+        )}
+        {canManagePosters && <ManagePosters clubId={club.id} />}
       </div>
     </details>
+  )
+}
+
+// Members see the announcement on the club page right away, and the notifications
+// job alerts them within a few minutes (in the app, and by email if they opted in).
+type AnnouncementFormProps = { clubId: string; onClose: () => void; onPosted: () => void }
+
+function AnnouncementForm({ clubId, onClose, onPosted }: AnnouncementFormProps) {
+  const [title, setTitle] = useState('')
+  const [body, setBody] = useState('')
+  const [posting, setPosting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    setPosting(true)
+    setError(null)
+    try {
+      await postAnnouncement({ clubId, title: title.trim(), body: body.trim() })
+      onPosted()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong.')
+      setPosting(false)
+    }
+  }
+
+  const field =
+    'w-full rounded-md border border-gray-300 p-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30'
+
+  return (
+    <form onSubmit={submit} className="space-y-2 rounded-md border border-gray-200 p-3">
+      <p className="font-semibold">New announcement</p>
+      <input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="Title"
+        aria-label="Announcement title"
+        maxLength={120}
+        required
+        autoFocus
+        className={field}
+      />
+      <textarea
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        placeholder="What do members need to know?"
+        aria-label="Announcement message"
+        maxLength={2000}
+        rows={4}
+        required
+        className={`${field} resize-y`}
+      />
+      {error && (
+        <p role="alert" className="text-sm text-red-700">
+          {error}
+        </p>
+      )}
+      <div className="flex justify-end gap-2">
+        <Button variant="secondary" onClick={onClose} disabled={posting}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={posting || !title.trim() || !body.trim()}>
+          {posting ? 'Posting…' : 'Post'}
+        </Button>
+      </div>
+    </form>
   )
 }
 
@@ -316,8 +445,10 @@ function Finances({ clubId }: { clubId: string }) {
 
 function Documents({ clubId }: { clubId: string }) {
   return (
-    <Card>
-      <CardTitle action={<span className="text-xs text-gray-500">Sample data</span>}>Documents</CardTitle>
+    <ConceptCard
+      title="Documents"
+      description="Officers would keep the club's files here, like the constitution, budgets, and meeting notes."
+    >
       <ul className="space-y-2 text-sm">
         {documentsForClub(clubId).map((doc) => (
           <li key={doc.id} className="flex items-center gap-2">
@@ -327,10 +458,10 @@ function Documents({ clubId }: { clubId: string }) {
           </li>
         ))}
       </ul>
-      <Button variant="secondary" className="mt-4 w-full">
+      <Button variant="secondary" disabled className="mt-4 w-full">
         <Upload size={16} aria-hidden="true" />
         Upload document
       </Button>
-    </Card>
+    </ConceptCard>
   )
 }

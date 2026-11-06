@@ -621,4 +621,14 @@ export const ledgerForClub = (clubId: string) => ledger.filter((entry) => entry.
 
 export const teamsForClub = (clubId: string) => clubTeams.filter((team) => team.clubId === clubId)
 
-export const documentsForClub = (clubId: string) => documents.filter((doc) => doc.clubId === clubId)
+// Clubs without their own sample documents show these, so the concept looks the same everywhere.
+const genericDocuments = [
+  { name: 'Club constitution.pdf', uploadedAt: '2026-08-28' },
+  { name: 'Fall 2026 budget.xlsx', uploadedAt: '2026-09-05' },
+  { name: 'Officer meeting notes.docx', uploadedAt: '2026-10-30' },
+]
+
+export const documentsForClub = (clubId: string): ClubDocument[] => {
+  const own = documents.filter((doc) => doc.clubId === clubId)
+  return own.length ? own : genericDocuments.map((doc, i) => ({ ...doc, id: `${clubId}-doc${i}`, clubId }))
+}

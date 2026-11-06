@@ -1,8 +1,7 @@
 // Calendar (side menu): upcoming events the user RSVP'd to, with one-tap export.
 // "Can't go" cancels the RSVP right here, with an Undo in case it was a mistake.
 //
-// To build:
-// - Google: open a prefilled Google Calendar link. Apple and Outlook: download an .ics file.
+// Google opens a prefilled Google Calendar event; Apple and Outlook download an .ics file.
 // Concept only (out of scope): two-way Google Calendar sync.
 import { MapPin, X } from 'lucide-react'
 import { useState } from 'react'
@@ -14,6 +13,7 @@ import { addRsvp, cancelRsvp, fetchMyRsvpEvents, type ClubEvent } from '../../li
 import { formatDayHeading, formatTime } from '../../lib/format'
 import { useClubs, useCurrentUser } from '../../lib/session/hooks'
 import { useLoad } from '../../lib/useLoad'
+import { downloadIcs, googleCalendarUrl } from './calendarExport'
 
 export function CalendarPage() {
   const { userId, loading: sessionLoading } = useCurrentUser()
@@ -61,7 +61,10 @@ export function CalendarPage() {
       <PageHeader title="Calendar" subtitle="Upcoming events you RSVP'd to" />
 
       {lastCancelled && (
-        <div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-squid px-4 py-3 text-sm text-white">
+        <div
+          role="status"
+          className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-squid px-4 py-3 text-sm text-white"
+        >
           <span>
             You're no longer going to <span className="font-semibold">{lastCancelled.title}</span>.
           </span>
@@ -92,36 +95,48 @@ export function CalendarPage() {
           <p className="text-gray-600">You haven't RSVP'd to any upcoming events. Find some on Discover.</p>
         </Card>
       ) : (
-        rsvps.map((event) => (
-          <Card key={event.id}>
-            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-amber-700">
-              {formatDayHeading(event.startsAt)}
-            </p>
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h2 className="font-bold">{event.title}</h2>
-                <p className="text-sm text-gray-600">
-                  {formatTime(event.startsAt)} · {clubById(event.clubId)?.name}
-                </p>
-                {event.location && (
-                  <p className="flex items-center gap-1.5 text-sm text-gray-600">
-                    <MapPin size={14} aria-hidden="true" />
-                    {event.location}
+        rsvps.map((event) => {
+          const exportable = { ...event, clubName: clubById(event.clubId)?.name }
+          return (
+            <Card key={event.id}>
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-amber-700">
+                {formatDayHeading(event.startsAt)}
+              </p>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="font-bold">{event.title}</h2>
+                  <p className="text-sm text-gray-600">
+                    {formatTime(event.startsAt)} · {clubById(event.clubId)?.name}
                   </p>
-                )}
+                  {event.location && (
+                    <p className="flex items-center gap-1.5 text-sm text-gray-600">
+                      <MapPin size={14} aria-hidden="true" />
+                      {event.location}
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="secondary" onClick={() => cancel(event)} disabled={pendingId !== null}>
+                    <X size={16} aria-hidden="true" />
+                    {pendingId === event.id ? 'Removing…' : "Can't go"}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => window.open(googleCalendarUrl(exportable), '_blank', 'noopener')}
+                  >
+                    Google
+                  </Button>
+                  <Button variant="secondary" onClick={() => downloadIcs(exportable)}>
+                    Apple
+                  </Button>
+                  <Button variant="secondary" onClick={() => downloadIcs(exportable)}>
+                    Outlook
+                  </Button>
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="secondary" onClick={() => cancel(event)} disabled={pendingId !== null}>
-                  <X size={16} aria-hidden="true" />
-                  {pendingId === event.id ? 'Removing…' : "Can't go"}
-                </Button>
-                <Button variant="secondary">Google</Button>
-                <Button variant="secondary">Apple</Button>
-                <Button variant="secondary">Outlook</Button>
-              </div>
-            </div>
-          </Card>
-        ))
+            </Card>
+          )
+        })
       )}
 
       <ConceptCard

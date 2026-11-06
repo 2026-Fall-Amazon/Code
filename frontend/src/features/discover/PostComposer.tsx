@@ -1,4 +1,5 @@
-// "New post" box at the top of Discover. Only shown to leaders and posters.
+// "New post" box at the top of Discover, and in "Manage club" on the club page.
+// Only shown to leaders and posters.
 import { ImagePlus, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '../../components/Button'
@@ -8,7 +9,12 @@ import { createPost, IMAGE_TYPES, MAX_BODY_LENGTH, MAX_IMAGES, validateImages } 
 
 type Attachment = { file: File; previewUrl: string }
 
-export function PostComposer({ clubs }: { clubs: Club[] }) {
+type PostComposerProps = {
+  clubs: Club[]
+  onPosted?: () => void
+}
+
+export function PostComposer({ clubs, onPosted }: PostComposerProps) {
   const [pickedClubId, setClubId] = useState(clubs[0].id)
   // Fall back to the first club if the user lost posting access to the one they picked.
   const clubId = clubs.some((c) => c.id === pickedClubId) ? pickedClubId : clubs[0].id
@@ -49,6 +55,7 @@ export function PostComposer({ clubs }: { clubs: Club[] }) {
       attachments.forEach((a) => URL.revokeObjectURL(a.previewUrl))
       setBody('')
       setAttachments([])
+      onPosted?.()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong.')
     } finally {
