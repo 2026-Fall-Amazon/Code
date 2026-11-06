@@ -57,6 +57,21 @@ export function PostCard({ post }: { post: Post }) {
         )}
       </header>
 
+      {/* Right under the menu, so it's on screen even when the post has a tall image. */}
+      {mode === 'confirm-delete' && (
+        <div className="mx-4 mb-3 flex flex-wrap items-center justify-between gap-2 rounded-md bg-red-50 p-3 text-sm">
+          <span className="font-medium text-red-800">Delete this post? This can't be undone.</span>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={() => setMode('view')}>
+              Cancel
+            </Button>
+            <Button className="bg-red-700 text-white hover:bg-red-800" onClick={() => run(() => deletePost(post.id))}>
+              Delete
+            </Button>
+          </div>
+        </div>
+      )}
+
       {mode === 'edit' ? (
         <EditForm
           initialBody={post.body}
@@ -71,20 +86,6 @@ export function PostCard({ post }: { post: Post }) {
       )}
 
       {imageUrls.length > 0 && <ImageGrid urls={imageUrls} />}
-
-      {mode === 'confirm-delete' && (
-        <div className="mx-4 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md bg-red-50 p-3 text-sm">
-          <span className="font-medium text-red-800">Delete this post? This can't be undone.</span>
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => setMode('view')}>
-              Cancel
-            </Button>
-            <Button className="bg-red-700 text-white hover:bg-red-800" onClick={() => run(() => deletePost(post.id))}>
-              Delete
-            </Button>
-          </div>
-        </div>
-      )}
 
       {error && (
         <p role="alert" className="mx-4 mt-3 text-sm text-red-700">

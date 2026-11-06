@@ -37,6 +37,21 @@ export async function fetchClubAnnouncements(clubId: string) {
   return announcements.sort((a, b) => postedAt(b).localeCompare(postedAt(a)))
 }
 
+// Posts an announcement to a club. Announcement writes are ADMINS-only in the schema,
+// so this works for admins; club leaders need a backend rule or Lambda first.
+export async function postAnnouncement(input: { clubId: string; title: string; body: string }) {
+  const { data, errors } = await client.models.Announcement.create({
+    ...input,
+    publishedAt: new Date().toISOString(),
+  })
+  if (errors?.some((e) => /unauthorized/i.test(e.message))) {
+    throw new Error('Only admins can post announcements for now.')
+  }
+  throwIfErrors(errors)
+  if (!data) throw new Error('Could not post the announcement.')
+  return data
+}
+
 // Upcoming events the signed-in user RSVP'd to, soonest first.
 export async function fetchMyRsvpEvents(userId: string) {
   const rsvps = await listAll((nextToken) => client.models.RSVP.list({ nextToken }))
