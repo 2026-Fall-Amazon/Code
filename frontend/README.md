@@ -20,10 +20,10 @@ npm --prefix frontend run dev
 | `src/lib/session/` | Who's signed in, all clubs, and the user's clubs and roles, loaded once. See its README. |
 | `src/lib/clubData.ts` | Shared reads: upcoming events, a club's events and announcements, the user's RSVPs, member counts. |
 | `src/lib/useLoad.ts` | Loads data for a page, with loading and error states. |
-| `src/mock/` | Sample content. Most of it is saved into the real database by Settings → Admin tools; the rest is for features without a backend yet (ledger, documents) and concept previews. Pages don't read it for anything that has real data. |
+| `src/mock/` | Sample content. Most of it is saved into the real database by Settings → Admin tools; the rest is for the finance ledger (no backend yet) and concept previews. Pages don't read it for anything that has real data. |
 | `src/lib/format.ts` | Date and money formatting. |
 | `src/index.css` | Tailwind setup and the brand color tokens. |
-| `src/config.ts` | The app name (placeholder until the team picks one). |
+| `src/config.ts` | The app name, "Amazon Campus". |
 
 ## Styling
 
@@ -40,7 +40,7 @@ Cards are white with `rounded-lg shadow-sm` (use `<Card>`). Primary actions use 
 
 ## Concept features
 
-Features that are out of scope for the MVP (group chat and direct messages, two-way Google Calendar sync, video, collecting dues) still appear in the demo so reviewers can see where they would go. Wrap them in `<ConceptCard>` or put a `<ConceptBadge />` next to them, and leave their buttons `disabled`. Never present a concept feature as working.
+Features that are out of scope for the MVP (group chat and direct messages, dues payment, video, documents, teams, two-way Google Calendar sync) still appear in the demo so reviewers can see where they would go. Wrap them in `<ConceptCard>` or put a `<ConceptBadge />` next to them, and leave their buttons `disabled`. Never present a concept feature as working.
 
 ## Loading real data
 

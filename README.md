@@ -12,21 +12,35 @@ Notre Dame has about 500 recognized clubs, which hosted 8,855 events in 2024–2
 
 ## Features
 
-**Working**
-- Sign-up and sign-in, with a first-time profile (name, major, class year, interests)
-- Clubs directory with search and categories; club pages with join and leave
-- Events with RSVPs, and a calendar of the events you're going to
-- Announcements and an inbox of updates from your clubs
-- Notifications: in the app, by email, and as a weekly digest
-- Discover: a feed of club posts with photos and likes; club leaders choose who can post
-- Admin tools for loading demo content and assigning club leaders
+**Working** (real data, saved in AWS)
+- **Accounts:** email sign-up and sign-in, then a first-time profile (name, major, class year, interests) you can edit later
+- **Home:** your upcoming schedule and your clubs, each with its next event and latest announcement
+- **Clubs:** a directory with search (also from the top bar) and category filters; club pages with description, member count, founding year, upcoming events, and announcements; join and leave
+- **Events:** RSVP with "going" counts; a calendar of your RSVPs where you can cancel (with undo); one-tap export to Google, Apple, or Outlook
+- **Inbox:** announcements and events from your clubs, newest first
+- **Notifications:** an in-app list with a live unread badge, optional browser alerts, and email alerts plus a weekly digest once an Amazon SES sender is set up
+- **Discover:** a feed of club posts (up to four photos each) mixed with upcoming events, with "For you" and "My clubs" tabs, likes, and edit/delete
+- **Club roles:** admins run the platform; club leaders choose which members can post; officers get a "Manage club" section to post to Discover and post announcements
+- **Admin tools:** load demo content, assign club leaders, and look up user IDs
 
-**Sample data only** (shown in the app, no backend yet)
-- Club finance ledger and documents
-- Calendar export to Google, Apple, and Outlook
+**Sample data only** (shown in the app, not saved yet)
+- Club finance ledger (balance, money in and out, transactions) in the officer view
 
-**Concept previews** (out of scope for the MVP, marked "Concept" in the app)
-- Group chat and direct messages, paying dues online, club videos, two-way Google Calendar sync
+**Not finished yet** (planned for the MVP)
+- "Post event" for club leaders, and announcements by leaders who aren't admins: event and announcement writes are admin-only until a backend rule or Lambda allows leaders
+- Limiting sign-up to @nd.edu email addresses
+- The Discover ranking (interests, clubs, timing, RSVPs); the feed is newest first for now
+- Loading the Discover feed a page at a time
+
+**Concept previews** (future expansion, marked "Concept" in the app)
+- Group chats and direct messages
+- Paying club dues online
+- Club videos (meeting recordings and highlights)
+- Club documents and file sharing
+- Teams within a club, each with its own lead and members
+- Two-way Google Calendar sync
+
+**Further ideas** (not in the app): AI-generated event descriptions and tags, club analytics, stronger protection for financial and personal data, backups and data export, and expanding beyond Notre Dame to other schools and organizations.
 
 ## How it's built
 
