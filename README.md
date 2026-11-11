@@ -1,3 +1,8 @@
+
+
+https://github.com/user-attachments/assets/ba65db95-82ac-432c-943c-3c93cc1ea242
+
+
 # Amazon Campus
 
 One home for every club on campus: events, announcements, posts, and club info in a single web app built on AWS.
